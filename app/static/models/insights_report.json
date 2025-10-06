@@ -1,0 +1,84 @@
+{
+  "model_performance": {
+    "yearly": {
+      "best_model": "random_forest",
+      "r2_score": -0.095,
+      "reliability": "Faible"
+    },
+    "monthly": {
+      "best_model": "linear_regression",
+      "r2_score": 0.113,
+      "reliability": "Faible"
+    },
+    "weekly": {
+      "best_model": "linear_regression",
+      "r2_score": 0.054,
+      "reliability": "Faible"
+    }
+  },
+  "predictions_summary": {
+    "yearly": {
+      "total_5_years": 698,
+      "average_per_year": 140,
+      "trend": "Décroissante"
+    },
+    "monthly": {
+      "total_next_year": 177,
+      "average_per_month": 15,
+      "peak_month": "2026-06"
+    }
+  },
+  "feature_importance": {
+    "yearly": {
+      "random_forest": {
+        "annee_inscription": 0.35161949523867164,
+        "annee_normalized": 0.3522544790561966,
+        "trend": 0.29612602570513163
+      },
+      "xgboost": {
+        "annee_inscription": 1.0,
+        "annee_normalized": 0.0,
+        "trend": 0.0
+      }
+    },
+    "monthly": {
+      "random_forest": {
+        "annee_inscription": 0.12557064263005943,
+        "mois_inscription": 0.11008936066850879,
+        "mois_sin": 0.07373854200036764,
+        "mois_cos": 0.06204780670307851,
+        "trend": 0.5175984447668984,
+        "annee_normalized": 0.11095520323108708
+      },
+      "xgboost": {
+        "annee_inscription": 0.3407629430294037,
+        "mois_inscription": 0.09916255623102188,
+        "mois_sin": 0.11876138299703598,
+        "mois_cos": 0.20155951380729675,
+        "trend": 0.2397535741329193,
+        "annee_normalized": 0.0
+      }
+    },
+    "weekly": {
+      "random_forest": {
+        "annee_inscription": 0.08556812222683685,
+        "semaine_inscription": 0.13207617675756406,
+        "semaine_sin": 0.14949676908714526,
+        "semaine_cos": 0.15380440859340758,
+        "trend": 0.4790545233350463
+      },
+      "xgboost": {
+        "annee_inscription": 0.16004689037799835,
+        "semaine_inscription": 0.09925997257232666,
+        "semaine_sin": 0.19468970596790314,
+        "semaine_cos": 0.338503897190094,
+        "trend": 0.20749951899051666
+      }
+    }
+  },
+  "recommendations": [
+    "📉 Tendance décroissante: Analyser les causes et ajuster la stratégie de recrutement",
+    "📅 Pic d'activité prévu en 2026-06",
+    "🎯 Planifier les ressources en fonction des variations saisonnières"
+  ]
+}

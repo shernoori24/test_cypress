@@ -1,0 +1,45 @@
+<!-- app/templates/error.html -->
+{% extends "base.html" %}
+
+{% block title %}Erreur - {{ error_code }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card border-0 shadow">
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h1 class="h2 text-danger mb-3">
+                        {% if error_code %}
+                            Erreur {{ error_code }}
+                        {% else %}
+                            Une erreur s'est produite
+                        {% endif %}
+                    </h1>
+                    
+                    <p class="text-muted mb-4">
+                        {% if error_message %}
+                            {{ error_message }}
+                        {% else %}
+                            Désolé, quelque chose s'est mal passé. Veuillez réessayer plus tard.
+                        {% endif %}
+                    </p>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{{ url_for('home.index') }}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Retour à l'accueil
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

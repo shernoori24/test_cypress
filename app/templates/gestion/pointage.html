@@ -1,0 +1,3035 @@
+{% extends "base.html" %}
+{% block title %}Pointage Présences{% endblock %}
+
+{% block body %}
+<style>
+.atelier-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.atelier-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.atelier-card.active {
+    border-color: #007bff;
+    background-color: #e7f3ff;
+}
+
+.apprenant-item {
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin: 3px 0;
+    cursor: pointer;
+}
+
+.apprenant-item:hover {
+    background-color: #f8f9fa;
+}
+
+.apprenant-item.present {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.apprenant-item.absent {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.apprenant-info {
+    line-height: 1.2;
+}
+
+.apprenant-prenom {
+    color: #007bff;
+    font-size: 1rem;
+}
+
+.apprenant-nom {
+    color: #495057;
+    font-size: 1rem;
+    margin-left: 6px;
+}
+
+.apprenant-item .status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.status-present {
+    background-color: #28a745;
+}
+
+.status-absent {
+    background-color: #dc3545;
+}
+
+.status-pending {
+    background-color: #ffc107;
+}
+
+.filtre-heure {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    margin: 2px;
+    transition: all 0.3s ease;
+}
+
+.filtre-heure:hover, .filtre-heure.active {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    transform: scale(1.05);
+    color: white;
+}
+
+.jour-navigation {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.jour-navigation:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: white;
+}
+
+.recap-card {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.floating-validation {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+}
+
+.btn-validation {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-validation:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    color: white;
+}
+
+.badge-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.hover-bg-light:hover {
+    background-color: #e9ecef !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Nouveaux styles pour le bouton de validation en bas de page */
+#btnValiderFinal {
+    min-width: 250px;
+    transition: all 0.3s ease;
+}
+
+#btnValiderFinal:disabled {
+    background: #6c757d !important;
+    border-color: #6c757d !important;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+@media (max-width: 768px) {
+    .atelier-card {
+        margin-bottom: 10px;
+    }
+    
+    .floating-validation {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .btn-validation {
+        padding: 12px 20px;
+        font-size: 1rem;
+    }
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.status-present { background-color: #28a745; }
+.status-absent { background-color: #dc3545; }
+.status-pending { background-color: #ffc107; }
+
+/* NOUVEAUX STYLES POUR L'INTERFACE UNIFIÉE */
+.classe-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.classe-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.classe-header {
+    cursor: pointer;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.classe-header:hover {
+    background: linear-gradient(135deg, #e7f3ff 0%, #cce7ff 100%);
+}
+
+.classe-header.expanded {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-bottom-color: #c3e6cb;
+}
+
+.classe-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    background-color: #ffffff;
+}
+
+.classe-content.expanded {
+    max-height: 800px;
+    padding: 20px;
+}
+
+.apprenant-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.apprenant-item-integre {
+    padding: 10px 15px;
+    margin: 0;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    height: 100%;
+}
+
+.apprenant-item-integre:hover {
+    background-color: #f8f9fa;
+    transform: translateX(3px);
+}
+
+.apprenant-item-integre.present {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.apprenant-item-integre.absent {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.chevron-indicator {
+    transition: transform 0.3s ease;
+}
+
+.chevron-indicator.expanded {
+    transform: rotate(180deg);
+}
+
+/* Styles pour le formulaire d'ajout d'apprenants temporaires */
+.form-control-lg {
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.form-control-lg:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+#nomTemporaire:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+#prenomTemporaire:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+}
+
+.apercu-affichage {
+    border: 2px dashed #007bff;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.apercu-affichage:hover {
+    background: linear-gradient(135deg, #e7f3ff 0%, #cce7ff 100%);
+}
+
+.stats-mini {
+    font-size: 0.9rem;
+}
+
+.btn-action-classe {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    margin: 2px;
+}
+
+/* STYLES POUR APPRENANTS TEMPORAIRES */
+.apprenant-temporaire {
+    background-color: #fff3cd !important;
+    border-color: #ffc107 !important;
+    color: #856404 !important;
+    position: relative;
+    border-width: 2px !important;
+}
+
+.apprenant-temporaire::before {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(45deg, #ff8c00, #ffa500);
+    border-radius: 10px;
+    z-index: -1;
+}
+
+.badge-temporaire {
+    background-color: #ff8c00 !important;
+    color: white !important;
+    animation: pulse-orange 2s infinite;
+    font-weight: bold;
+}
+
+@keyframes pulse-orange {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.btn-group-sm .btn {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.alert-post-it {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+    border-left: 4px solid #ff8c00;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .classe-card {
+        margin-bottom: 15px;
+    }
+    
+    .classe-header {
+        padding: 12px;
+    }
+    
+    .classe-content.expanded {
+        padding: 15px;
+    }
+}
+</style>
+
+<div class="container-fluid">
+    <!-- En-tête avec navigation des jours -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h3 class="mb-0">
+                                <i class="fas fa-clipboard-check"></i> Pointage Présences
+                            </h3>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="recap-card">
+                                <h5 class="mb-1" id="dateInfo">Lundi 22 Juillet 2025</h5>
+                                <small id="ateliersCount">0 ateliers programmés</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn jour-navigation" onclick="changerJour(-1)">
+                                    <i class="fas fa-chevron-left"></i> Précédent
+                                </button>
+                                <button type="button" class="btn jour-navigation" onclick="allerAujourdhui()">
+                                    <i class="fas fa-home"></i> Aujourd'hui
+                                </button>
+                                <button type="button" class="btn jour-navigation" onclick="changerJour(1)">
+                                    Suivant <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres par heure -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock"></i> Filtrer par créneaux horaires
+                    </h6>
+                    <button class="btn btn-sm btn-outline-light" onclick="reinitialiserFiltrage()" title="Réinitialiser le filtrage sauvegardé">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-center" id="filtresHeures">
+                        <button class="btn filtre-heure active" data-heure="all" onclick="filtrerParHeure('all')">
+                            <i class="fas fa-list"></i> Tous les créneaux
+                        </button>
+                        <!-- Les boutons d'heure seront générés dynamiquement -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x text-info mb-2"></i>
+                    <h4 class="text-info" id="totalApprenants">0</h4>
+                    <p class="card-text">Total Apprenants</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <i class="fas fa-check fa-2x text-success mb-2"></i>
+                    <h4 class="text-success" id="totalPresents">0</h4>
+                    <p class="card-text">Présents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <i class="fas fa-hourglass-half fa-2x text-warning mb-2"></i>
+                    <h4 class="text-warning" id="totalEnAttente">0</h4>
+                    <p class="card-text">En Attente</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre de recherche d'apprenants -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-search"></i> Recherche rapide d'apprenant
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="rechercheApprenantGlobale" 
+                               placeholder="🔍 Tapez le nom, prénom ou numéro d'un apprenant..."
+                               onkeyup="rechercherApprenantGlobal(this.value)"
+                               autocomplete="off">
+                        <button class="btn btn-outline-secondary" onclick="effacerRechercheGlobale()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <!-- Dropdown des résultats -->
+                    <div id="resultatsRechercheGlobale" class="mt-2" style="display: none;">
+                        <div class="list-group" id="listeResultatsGlobale">
+                            <!-- Résultats générés dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone des ateliers unifié avec pointage intégré -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-graduation-cap"></i> Classes du jour - Pointage intégré
+                        <span class="badge bg-primary ms-2" id="ateliersVisibles">0</span>
+                    </h6>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row" id="listeAteliers">
+                        <div class="col-12 text-center text-muted py-5">
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                            <p>Aucune classe active pour ce jour</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton de validation en bas de page -->
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow-sm border-success">
+                <div class="card-body text-center">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-check-double text-success"></i> Validation des présences
+                    </h6>
+                    
+                    <!-- Statistiques détaillées -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <small class="text-muted d-block mb-2">
+                                <i class="fas fa-users"></i> Présents / Total apprenants
+                            </small>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small"><span id="nbPresents">0</span> présents</span>
+                                <span class="small"><span id="nbTotalApprenants">0</span> apprenants</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" id="progressPresents" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <small class="text-muted d-block mb-2">
+                                <i class="fas fa-comment-dots"></i> Observations / Total classes
+                            </small>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small"><span id="nbObservations">0</span> observations</span>
+                                <span class="small"><span id="nbTotalClasses">0</span> classes</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-info" id="progressObservations" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alerte pour les apprenants temporaires -->
+                    <div class="alert alert-post-it mt-3" id="alertePostIt" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-sticky-note fa-2x me-3"></i>
+                            <div>
+                                <strong>Apprenants temporaires en attente</strong><br>
+                                <span id="messagePostIt">0 apprenant(s) temporaire(s) à résoudre avant validation</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-success btn-lg" id="btnValiderFinal" onclick="validerDefinitivementDirect()" disabled>
+                        <i class="fas fa-save"></i> Valider et enregistrer
+                    </button>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Vérifiez vos pointages et observations avant de valider
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de validation (masqué, conservé pour compatibilité) -->
+<div class="modal fade d-none" id="modalValidation" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-double"></i> Validation des Présences - <span id="modalDateValidation"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Vérifiez les présences avant de valider. Une fois validées, elles seront enregistrées dans la base de données.
+                </div>
+                
+                <!-- Récapitulatif des modifications -->
+                <div id="recapitulatifModifications">
+                    <!-- Le contenu sera généré dynamiquement -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-warning" onclick="modifierPresences()">
+                    <i class="fas fa-edit"></i> Modifier
+                </button>
+                <button type="button" class="btn btn-success" onclick="validerDefinitivement()">
+                    <i class="fas fa-check"></i> Valider et enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'ajout d'apprenant à une classe -->
+<div class="modal fade" id="modalAjoutApprenant" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus"></i> Ajouter un Apprenant - <span id="modalNomClasse"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Section apprenants actuellement assignés -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-users"></i> Apprenants actuellement assignés</h6>
+                    <div id="listeApprenantsAssignes" class="border rounded p-3" style="max-height: 150px; overflow-y: auto; background-color: #f8f9fa;">
+                        <!-- Liste générée dynamiquement avec photo -->
+                    </div>
+                </div>
+
+                <!-- Barre de recherche -->
+                <div class="mb-3">
+                    <label for="rechercheApprenant" class="form-label">
+                        <i class="fas fa-search"></i> Rechercher un apprenant (nom ou numéro)
+                    </label>
+                    <input type="text" class="form-control" id="rechercheApprenant" 
+                           placeholder="Tapez le nom ou le numéro..." 
+                           onkeyup="rechercherApprenantsDisponibles()">
+                </div>
+
+                <!-- Liste des apprenants disponibles -->
+                <div class="mb-3">
+                    <h6><i class="fas fa-user-check"></i> Apprenants disponibles</h6>
+                    <div id="listeApprenantsDisponibles" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Liste générée dynamiquement avec photo -->
+                    </div>
+<script>
+// Ajout vignette photo dans les listes du modal d'ajout d'apprenant
+function genererItemApprenantAvecPhoto(apprenant) {
+    // Récupérer le numéro (6 premiers caractères)
+    const numero = apprenant.numero ? apprenant.numero.substring(0,6) : '';
+    const nomComplet = apprenant.nom_complet || (apprenant.nom + ' ' + apprenant.prenom);
+    let defaultPhoto = '/default_profil.jpg';
+    if (apprenant.genre) {
+        if (apprenant.genre.toLowerCase() === 'f') defaultPhoto = '/photos_profils_apprenants/default_femme.jpg';
+        else if (apprenant.genre.toLowerCase() === 'm') defaultPhoto = '/photos_profils_apprenants/default_homme.jpg';
+    }
+    const photoJpg = `/photos_profils_apprenants/${numero}.jpg`;
+    const photoJpeg = `/photos_profils_apprenants/${numero}.jpeg`;
+    // Balise img avec fallback jpg/jpeg/default
+    const photoImg = `<img src="${photoJpg}" alt="Photo de ${nomComplet}" class="rounded-circle me-2" style="width:36px;height:36px;object-fit:cover;border:1px solid #ccc;" onerror="if(this.src.indexOf('.jpg')>-1){this.src='${photoJpeg}'}else{this.onerror=null;this.src='${defaultPhoto}'}">`;
+    return `<div class='d-flex align-items-center mb-1'>${photoImg}<span>${nomComplet}</span></div>`;
+}
+
+// Surcharge l'affichage des listes dans le modal
+function afficherApprenantsAssignes() {
+    const container = document.getElementById('listeApprenantsAssignes');
+    if (!classeEnCoursAjout || !classeEnCoursAjout.apprenants) { container.innerHTML = '<em>Aucun</em>'; return; }
+    let html = '';
+    classeEnCoursAjout.apprenants.forEach(numero => {
+        const apprenant = trouverApprenantParNumero(numero);
+        if (apprenant) html += genererItemApprenantAvecPhoto(apprenant);
+    });
+    container.innerHTML = html || '<em>Aucun</em>';
+}
+
+function afficherApprenantsDisponibles(filtre) {
+    const container = document.getElementById('listeApprenantsDisponibles');
+    if (!apprenantsDisponibles) { container.innerHTML = '<em>Aucun</em>'; return; }
+    let html = '';
+    apprenantsDisponibles.forEach(apprenant => {
+        // Filtrage par nom/numéro
+        if (filtre && !apprenant.nom_complet.toLowerCase().includes(filtre.toLowerCase()) && !apprenant.numero.includes(filtre)) return;
+        html += `<div class='d-flex align-items-center mb-1 cursor-pointer' onclick="ajouterApprenantAClasse('${apprenant.numero}')">${genererItemApprenantAvecPhoto(apprenant)}</div>`;
+    });
+    container.innerHTML = html || '<em>Aucun</em>';
+}
+</script>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'ajout d'apprenant temporaire -->
+<div class="modal fade" id="modalApprenantTemporaire" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-sticky-note"></i> Apprenant temporaire - <span id="modalClasseTemporaire"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Cet apprenant sera marqué comme "en attente d'ajout à l'inscription" et affiché avec un badge orange.
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="nomTemporaire" class="form-label">
+                            <i class="fas fa-user"></i> NOM de famille <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="nomTemporaire" 
+                               placeholder="NOM en MAJUSCULES" 
+                               style="text-transform: uppercase; font-weight: bold; font-size: 1.1rem;"
+                               oninput="mettreAJourApercu()">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="prenomTemporaire" class="form-label">
+                            <i class="fas fa-user"></i> Prénom <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="prenomTemporaire" 
+                               placeholder="Prénom"
+                               style="font-size: 1.1rem;"
+                               oninput="mettreAJourApercu()">
+                    </div>
+                </div>
+                
+                <!-- Aperçu de l'affichage -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-eye"></i> Aperçu de l'affichage :
+                    </label>
+                    <div class="border rounded p-3 bg-light apercu-affichage">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-warning text-dark me-2">
+                                <i class="fas fa-sticky-note"></i> TEMP
+                            </span>
+                            <strong id="apercuNomPrenom" class="text-primary">
+                                [NOM Prénom]
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Important :</strong> Cet apprenant devra être inscrit définitivement avant la validation finale des présences.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-warning" onclick="ajouterApprenantTemporaire()">
+                    <i class="fas fa-plus"></i> Ajouter temporaire
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let dateActuelle = new Date();
+let ateliersJour = [];
+let presences = {}; // Structure: {atelier_id: {apprenant_numero: 'present'|'absent'}}
+let modificationsCount = 0;
+let sauvegardeTimeout = null; // Pour le debounce des observations
+
+// NOUVELLES VARIABLES POUR APPRENANTS TEMPORAIRES
+let apprenantsTemporaires = {}; // Structure: {classe_id: {temp_id: {nom, prenom, statut_presence}}}
+let tempIdCounter = 1; // Compteur pour IDs temporaires uniques
+let classeEnCoursTemporaire = null; // Variable pour la classe en cours de modification
+
+// NOUVELLES VARIABLES POUR LA SAUVEGARDE DU FILTRAGE
+let filtrageSauvegarde = {
+    creneauSelectionne: 'all',
+    classesDepliees: {},
+    dateSelectionnee: null // NOUVEAU: Sauvegarder la date sélectionnée
+};
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    chargerJour();
+});
+
+// Fonction utilitaire pour debounce
+function debounce(func, wait) {
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(sauvegardeTimeout);
+            func(...args);
+        };
+        clearTimeout(sauvegardeTimeout);
+        sauvegardeTimeout = setTimeout(later, wait);
+    };
+}
+
+// Vérifier la synchronisation des observations avec le serveur
+function verifierSynchronisationObservations() {
+    console.log('🔄 Vérification synchronisation observations...');
+    
+    // Récupérer les observations locales
+    const observationsLocales = {};
+    ateliersJour.forEach(atelier => {
+        const textareaElement = document.getElementById(`observation_${atelier.id}`);
+        if (textareaElement) {
+            const observation = textareaElement.value.trim();
+            if (observation) {
+                observationsLocales[atelier.id] = observation;
+            }
+        }
+    });
+    
+    console.log('📝 Observations locales:', observationsLocales);
+    
+    // Afficher un indicateur de synchronisation
+    const syncIndicator = document.createElement('div');
+    syncIndicator.id = 'sync-indicator';
+    syncIndicator.innerHTML = '🔄 Synchronisation...';
+    syncIndicator.style.cssText = 'position:fixed;top:10px;right:10px;background:#007bff;color:white;padding:5px 10px;border-radius:3px;z-index:1000;';
+    document.body.appendChild(syncIndicator);
+    
+    // Simuler la vérification avec localStorage comme backup
+    setTimeout(() => {
+        const observationsTemp = JSON.parse(localStorage.getItem('pointage_temp') || '{}');
+        if (observationsTemp.observations) {
+            console.log('✅ Observations trouvées dans le stockage local');
+            syncIndicator.innerHTML = '✅ Synchronisé';
+            syncIndicator.style.background = '#28a745';
+        } else {
+            console.log('⚠️ Pas d\'observations dans le stockage local');
+            syncIndicator.innerHTML = '⚠️ À synchroniser';
+            syncIndicator.style.background = '#ffc107';
+        }
+        
+        // Supprimer l'indicateur après 3 secondes
+        setTimeout(() => {
+            if (syncIndicator.parentNode) {
+                syncIndicator.parentNode.removeChild(syncIndicator);
+            }
+        }, 3000);
+    }, 1000);
+}
+
+// Sauvegarde automatique du pointage temporaire
+async function sauvegarderPointageTemporaire() {
+    try {
+        console.log('🚀 Début sauvegarde temporaire...');
+        afficherDebugSynchronisation('🚀 Début sauvegarde...');
+        
+        // Collecter les observations actuelles - NOUVELLE VERSION AMÉLIORÉE
+        const observations = {};
+        let observationsCollectees = 0;
+        
+        // Parcourir TOUTES les classes (pas seulement celles avec présences)
+        ateliersJour.forEach(atelier => {
+            const textareaElement = document.getElementById(`observation_${atelier.id}`);
+            if (textareaElement) {
+                const observation = textareaElement.value.trim();
+                if (observation) {
+                    observations[atelier.id] = observation;
+                    observationsCollectees++;
+                    console.log(`📝 Observation collectée pour ${atelier.id}: "${observation}"`);
+                    afficherDebugSynchronisation(`📝 Obs: ${atelier.id} -> "${observation.substring(0, 20)}..."`);
+                }
+            }
+        });
+        
+        console.log(`📊 Total observations collectées: ${observationsCollectees}`);
+        console.log(`📊 Total présences: ${Object.keys(presences).length}`);
+        console.log(`📊 Total apprenants temporaires: ${Object.keys(apprenantsTemporaires).reduce((total, classeId) => total + Object.keys(apprenantsTemporaires[classeId]).length, 0)}`);
+        afficherDebugSynchronisation(`📊 Obs: ${observationsCollectees}, Prés: ${Object.keys(presences).length}, Temp: ${Object.keys(apprenantsTemporaires).length}`);
+
+        const donneesTemporaires = {
+            date: dateActuelle.toISOString().split('T')[0],
+            presences: presences,
+            observations: observations,
+            apprenants_temporaires: apprenantsTemporaires // NOUVEAU
+        };
+
+        console.log('📤 Données à sauvegarder:', donneesTemporaires);
+
+        // Tentative de sauvegarde sur le serveur
+        try {
+            const response = await fetch('/planning/api/sauvegarder-pointage-temporaire', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(donneesTemporaires)
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.error);
+            }
+            console.log('✅ Sauvegarde serveur réussie');
+            afficherDebugSynchronisation('✅ Serveur OK');
+        } catch (error) {
+            console.warn('⚠️ Échec sauvegarde serveur, utilisation localStorage:', error);
+            afficherDebugSynchronisation('⚠️ Serveur KO -> localStorage');
+            // Fallback: sauvegarder en localStorage si le serveur échoue
+            localStorage.setItem('pointage_temporaire', JSON.stringify(donneesTemporaires));
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde temporaire:', error);
+        // Fallback: sauvegarder en localStorage
+        try {
+            const donneesTemporaires = {
+                date: dateActuelle.toISOString().split('T')[0],
+                presences: presences,
+                observations: {}
+            };
+            localStorage.setItem('pointage_temporaire', JSON.stringify(donneesTemporaires));
+            console.log('💾 Sauvegarde fallback localStorage réussie');
+        } catch (localError) {
+            console.error('❌ Erreur localStorage:', localError);
+        }
+    }
+}
+
+// Restaurer le pointage temporaire au chargement
+async function restaurerPointageTemporaire() {
+    try {
+        const dateStr = dateActuelle.toISOString().split('T')[0];
+        
+        // Tentative de chargement depuis le serveur
+        let donneesRestaurees = null;
+        try {
+            const response = await fetch(`/planning/api/charger-pointage-temporaire/${dateStr}`);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                donneesRestaurees = result.data;
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement depuis le serveur:', error);
+        }
+
+        // Fallback: vérifier localStorage
+        if (!donneesRestaurees) {
+            const donneesLocales = localStorage.getItem('pointage_temporaire');
+            if (donneesLocales) {
+                const donneesParsees = JSON.parse(donneesLocales);
+                if (donneesParsees.date === dateStr) {
+                    donneesRestaurees = donneesParsees;
+                }
+            }
+        }
+
+        // Restaurer les données si trouvées
+        if (donneesRestaurees) {
+            presences = donneesRestaurees.presences || {};
+            console.log(`🔄 Présences restaurées:`, presences);
+            
+            // NOUVEAU: Restaurer les apprenants temporaires
+            apprenantsTemporaires = donneesRestaurees.apprenants_temporaires || {};
+            console.log(`🔄 Apprenants temporaires restaurés:`, apprenantsTemporaires);
+            
+            // Recalculer tempIdCounter pour éviter les conflits
+            let maxTempId = 0;
+            Object.values(apprenantsTemporaires).forEach(temporaires => {
+                Object.keys(temporaires).forEach(tempId => {
+                    const idNumber = parseInt(tempId.split('_')[1]);
+                    if (idNumber > maxTempId) {
+                        maxTempId = idNumber;
+                    }
+                });
+            });
+            tempIdCounter = maxTempId + 1;
+            console.log(`🔄 TempIdCounter mis à jour: ${tempIdCounter}`);
+            
+            // IMPORTANT: Mettre à jour l'affichage IMMÉDIATEMENT après restauration des présences
+            afficherAteliers(); // Redessiner avec les bonnes données
+            mettreAJourStatistiques(); // Mettre à jour les compteurs
+            mettreAJourModifications(); // Mettre à jour les barres et boutons
+            
+            // Restaurer les observations avec plus de détails
+            setTimeout(() => {
+                const observationsRestaurees = donneesRestaurees.observations || {};
+                console.log(`🔄 Tentative de restauration des observations:`, observationsRestaurees);
+                afficherDebugSynchronisation(`🔄 Restauration: ${Object.keys(observationsRestaurees).length} obs`);
+                
+                let observationsReussies = 0;
+                Object.entries(observationsRestaurees).forEach(([atelierId, observation]) => {
+                    const textareaElement = document.getElementById(`observation_${atelierId}`);
+                    if (textareaElement) {
+                        textareaElement.value = observation;
+                        observationsReussies++;
+                        console.log(`✅ Observation restaurée pour ${atelierId}: "${observation}"`);
+                        afficherDebugSynchronisation(`✅ Restauré: ${atelierId}`);
+                    } else {
+                        console.warn(`⚠️ Textarea non trouvé pour ${atelierId}`);
+                        afficherDebugSynchronisation(`⚠️ Textarea manquant: ${atelierId}`);
+                    }
+                });
+                
+                console.log(`📊 ${observationsReussies} observation(s) restaurée(s) sur ${Object.keys(observationsRestaurees).length}`);
+                afficherDebugSynchronisation(`📊 ${observationsReussies}/${Object.keys(observationsRestaurees).length} restaurées`);
+                
+                // Final: Mettre à jour une dernière fois avec les observations
+                mettreAJourModifications();
+                
+                // IMPORTANT: Configurer les event listeners APRÈS avoir restauré les valeurs
+                configurerSauvegardeObservations();
+                
+            }, 1000); // Augmenter le délai pour s'assurer que tous les éléments sont créés
+        } else {
+            console.log('ℹ️ Aucune donnée temporaire trouvée pour cette date');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la restauration:', error);
+    }
+}
+
+// Configurer la sauvegarde automatique des observations
+function configurerSauvegardeObservations() {
+    const textareas = document.querySelectorAll('textarea[id^="observation_"]');
+    console.log(`📝 Configuration sauvegarde observations: ${textareas.length} champs trouvés`);
+    
+    textareas.forEach(textarea => {
+        // Éviter de dupliquer les event listeners
+        if (!textarea.hasAttribute('data-sauvegarde-configuree')) {
+            
+            // Sauvegarde IMMÉDIATE comme pour les présences - à chaque input
+            textarea.addEventListener('input', () => {
+                console.log(`💾 Input détecté pour ${textarea.id}, sauvegarde immédiate...`);
+                // Affichage debug visible
+                afficherDebugSynchronisation(`💾 Sauvegarde observation ${textarea.id}`);
+                // Exactement comme togglePresence() fait pour les présences
+                sauvegarderPointageTemporaire();
+                mettreAJourModifications();
+            });
+            
+            // Sauvegarde de confirmation quand on quitte le champ
+            textarea.addEventListener('blur', () => {
+                console.log(`💾 Blur détecté pour ${textarea.id}, sauvegarde confirmation...`);
+                afficherDebugSynchronisation(`✅ Confirmation sauvegarde ${textarea.id}`);
+                sauvegarderPointageTemporaire();
+            });
+            
+            // Marquer comme configuré
+            textarea.setAttribute('data-sauvegarde-configuree', 'true');
+            console.log(`✅ Event listeners configurés pour ${textarea.id}`);
+        }
+    });
+}
+
+// Fonction de debug visible pour tracer la synchronisation
+/*
+function afficherDebugSynchronisation(message) {
+    // Créer ou mettre à jour l'indicateur de debug
+    let debugDiv = document.getElementById('debug-synchronisation');
+    if (!debugDiv) {
+        debugDiv = document.createElement('div');
+        debugDiv.id = 'debug-synchronisation';
+        debugDiv.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 9999;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+        `;
+        document.body.appendChild(debugDiv);
+    }
+    
+    // Ajouter le message avec timestamp
+    const timestamp = new Date().toLocaleTimeString();
+    const messageDiv = document.createElement('div');
+    messageDiv.innerHTML = `[${timestamp}] ${message}`;
+    debugDiv.appendChild(messageDiv);
+    
+    // Garder seulement les 10 derniers messages
+    while (debugDiv.children.length > 10) {
+        debugDiv.removeChild(debugDiv.firstChild);
+    }
+    
+    // Auto-scroll vers le bas
+    debugDiv.scrollTop = debugDiv.scrollHeight;
+}
+*/
+// Fonction vide pour désactiver temporairement le debug
+function afficherDebugSynchronisation(message) {
+    // Debug désactivé temporairement
+}
+
+// ========== FONCTIONS DE SAUVEGARDE DU FILTRAGE ==========
+
+// Sauvegarder l'état du filtrage dans localStorage
+function sauvegarderFiltrage() {
+    try {
+        const filtrage = {
+            creneauSelectionne: filtrageSauvegarde.creneauSelectionne,
+            classesDepliees: filtrageSauvegarde.classesDepliees,
+            dateSelectionnee: dateActuelle.toISOString(), // NOUVEAU: Sauvegarder la date courante
+            timestamp: Date.now()
+        };
+        localStorage.setItem('pointage_filtrage', JSON.stringify(filtrage));
+        console.log('💾 Filtrage sauvegardé:', filtrage);
+    } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde du filtrage:', error);
+    }
+}
+
+// Restaurer l'état du filtrage depuis localStorage
+function restaurerFiltrage() {
+    try {
+        const filtrageStocke = localStorage.getItem('pointage_filtrage');
+        if (filtrageStocke) {
+            const filtrage = JSON.parse(filtrageStocke);
+            console.log('🔄 Filtrage restauré:', filtrage);
+            return filtrage;
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors de la restauration du filtrage:', error);
+    }
+    return null;
+}
+
+// Appliquer le filtrage restauré
+function appliquerFiltrageRestaure(filtrage) {
+    if (!filtrage) return;
+    
+    // Restaurer le créneau sélectionné
+    const creneauExiste = ateliersJour.some(a => a.heure_debut === filtrage.creneauSelectionne) || filtrage.creneauSelectionne === 'all';
+    
+    if (creneauExiste) {
+        // Le créneau existe, l'appliquer
+        filtrageSauvegarde.creneauSelectionne = filtrage.creneauSelectionne;
+        filtrerParHeure(filtrage.creneauSelectionne);
+        console.log(`✅ Créneau "${filtrage.creneauSelectionne}" restauré`);
+    } else {
+        // Le créneau n'existe pas, afficher un message et revenir à "Tous"
+        console.log(`⚠️ Créneau "${filtrage.creneauSelectionne}" non disponible aujourd'hui`);
+        afficherMessageCreneauIndisponible(filtrage.creneauSelectionne);
+        filtrageSauvegarde.creneauSelectionne = 'all';
+        filtrerParHeure('all');
+    }
+    
+    // Restaurer l'état des classes dépliées
+    filtrageSauvegarde.classesDepliees = filtrage.classesDepliees || {};
+}
+
+// Afficher un message quand le créneau sauvegardé n'est pas disponible
+function afficherMessageCreneauIndisponible(creneauManquant) {
+    const message = document.createElement('div');
+    message.className = 'alert alert-warning alert-dismissible fade show';
+    message.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1050; max-width: 400px;';
+    message.innerHTML = `
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Filtrage restauré :</strong> Le créneau "${creneauManquant}" n'est pas disponible aujourd'hui.
+        <br>Affichage de toutes les classes.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(message);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+        if (message.parentNode) {
+            message.remove();
+        }
+    }, 5000);
+}
+
+// Sauvegarder l'état d'une classe (dépliée/repliée)
+function sauvegarderEtatClasse(atelierId, estDepliee) {
+    filtrageSauvegarde.classesDepliees[atelierId] = estDepliee;
+    sauvegarderFiltrage();
+}
+
+// Réinitialiser complètement le filtrage sauvegardé
+function reinitialiserFiltrage() {
+    // Confirmer avant de réinitialiser
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser le filtrage sauvegardé ?')) {
+        try {
+            // Supprimer de localStorage
+            localStorage.removeItem('pointage_filtrage');
+            
+            // Réinitialiser les variables locales
+            filtrageSauvegarde = {
+                creneauSelectionne: 'all',
+                classesDepliees: {},
+                dateSelectionnee: null // NOUVEAU: Réinitialiser aussi la date
+            };
+            
+            // Appliquer le filtrage par défaut
+            filtrerParHeure('all');
+            
+            // Afficher un message de confirmation
+            const message = document.createElement('div');
+            message.className = 'alert alert-success alert-dismissible fade show';
+            message.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1050; max-width: 350px;';
+            message.innerHTML = `
+                <i class="fas fa-check-circle"></i>
+                <strong>Filtrage réinitialisé !</strong> Toutes les préférences ont été supprimées.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(message);
+            
+            // Supprimer automatiquement après 3 secondes
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.remove();
+                }
+            }, 3000);
+            
+            console.log('✅ Filtrage réinitialisé avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de la réinitialisation:', error);
+        }
+    }
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // NOUVEAU: Restaurer la date sauvegardée avant de charger
+    const filtrageRestaure = restaurerFiltrage();
+    if (filtrageRestaure && filtrageRestaure.dateSelectionnee) {
+        dateActuelle = new Date(filtrageRestaure.dateSelectionnee);
+        console.log('📅 Date restaurée:', dateActuelle.toLocaleDateString('fr-FR'));
+    }
+    
+    chargerJour();
+});
+
+// Nettoyer le localStorage en fin de session (optionnel)
+window.addEventListener('beforeunload', function() {
+    // Note: Garder les données pour la session, elles seront automatiquement supprimées à la fermeture du navigateur
+    console.log('📝 Session se termine, données de filtrage conservées jusqu\'à fermeture du navigateur');
+});
+
+function changerJour(direction) {
+    dateActuelle.setDate(dateActuelle.getDate() + direction);
+    filtrageSauvegarde.dateSelectionnee = dateActuelle.toISOString(); // NOUVEAU: Sauvegarder la nouvelle date
+    sauvegarderFiltrage(); // NOUVEAU: Sauvegarder immédiatement
+    chargerJour();
+}
+
+function allerAujourdhui() {
+    dateActuelle = new Date();
+    filtrageSauvegarde.dateSelectionnee = dateActuelle.toISOString(); // NOUVEAU: Sauvegarder la date d'aujourd'hui
+    sauvegarderFiltrage(); // NOUVEAU: Sauvegarder immédiatement
+    chargerJour();
+}
+
+async function chargerJour() {
+    try {
+        // NOUVEAU: Sauvegarder la date courante à chaque chargement
+        filtrageSauvegarde.dateSelectionnee = dateActuelle.toISOString();
+        
+        // Mettre à jour l'affichage de la date
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        document.getElementById('dateInfo').textContent = 
+            dateActuelle.toLocaleDateString('fr-FR', options);
+        
+        // Charger uniquement les classes actives du jour
+        const nomJour = dateActuelle.toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
+        const classesActives = classes.filter(classe => 
+            classe.active && 
+            classe.jours && 
+            classe.jours.map(j => j.toLowerCase()).includes(nomJour)
+        );
+        
+        // Convertir les classes en format atelier pour l'affichage
+        ateliersJour = classesActives.map(classe => ({
+            id: `classe_${classe.id}`, // Préfixe pour distinguer des ateliers du planning
+            activite: classe.activite,
+            encadrant: classe.encadrant,
+            heure_debut: classe.heure_debut,
+            heure_fin: classe.heure_fin,
+            apprenants: classe.apprenants || [],
+            jour: nomJour,
+            source: 'classe', // Marquer la source
+            nom_classe: classe.nom
+        }));
+        
+        afficherAteliers();
+        genererFiltresHeures();
+        mettreAJourStatistiques();
+        
+        // NOUVEAU: Restaurer le pointage temporaire après avoir chargé les ateliers
+        await restaurerPointageTemporaire();
+        
+        // NOUVEAU: Restaurer le filtrage sauvegardé
+        setTimeout(() => {
+            const filtrageRestaure = restaurerFiltrage();
+            appliquerFiltrageRestaure(filtrageRestaure);
+        }, 500);
+        
+        // NOUVEAU: Déplier automatiquement toutes les classes pour faciliter l'utilisation (seulement si pas de filtrage sauvegardé)
+        setTimeout(() => {
+            const filtrageRestaure = restaurerFiltrage();
+            if (!filtrageRestaure || Object.keys(filtrageRestaure.classesDepliees || {}).length === 0) {
+                console.log('🔧 Auto-dépliement des classes (pas de sauvegarde)...');
+                ateliersJour.forEach(atelier => {
+                    toggleClasseContent(atelier.id);
+                });
+                console.log(`🔧 ${ateliersJour.length} classe(s) dépliée(s) automatiquement`);
+            } else {
+                console.log('🔧 Restauration des états sauvegardés des classes...');
+                Object.entries(filtrageRestaure.classesDepliees).forEach(([atelierId, estDepliee]) => {
+                    if (estDepliee) {
+                        const content = document.getElementById(`content_${atelierId}`);
+                        const chevron = document.getElementById(`chevron_${atelierId}`);
+                        const header = content?.previousElementSibling;
+                        
+                        if (content && !content.classList.contains('expanded')) {
+                            content.classList.add('expanded');
+                            if (chevron) chevron.classList.add('expanded');
+                            if (header) header.classList.add('expanded');
+                        }
+                    }
+                });
+            }
+        }, 1000);
+        
+        // Démarrer la vérification périodique de synchronisation
+        console.log('🔄 Démarrage vérification synchronisation périodique...');
+        setTimeout(() => {
+            verifierSynchronisationObservations();
+            
+            // Vérification toutes les 30 secondes
+            setInterval(() => {
+                verifierSynchronisationObservations();
+            }, 30000);
+        }, 2000); // Attendre 2 secondes après le chargement initial
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        ateliersJour = [];
+        afficherAteliers();
+    }
+}
+
+function afficherAteliers() {
+    const container = document.getElementById('listeAteliers');
+    const countElement = document.getElementById('ateliersCount');
+    const visiblesElement = document.getElementById('ateliersVisibles');
+    
+    console.log('🎨 Affichage ateliers - Données présences actuelles:', presences);
+    console.log('🎨 Ateliers du jour:', ateliersJour);
+    console.log('🎨 Apprenants temporaires:', apprenantsTemporaires);
+    afficherDebugSynchronisation('🎨 Affichage mis à jour');
+    
+    countElement.textContent = `${ateliersJour.length} classe${ateliersJour.length > 1 ? 's' : ''} active${ateliersJour.length > 1 ? 's' : ''}`;
+    
+    if (ateliersJour.length === 0) {
+        console.log('⚠️ Aucune classe active trouvée');
+        container.innerHTML = `
+            <div class="col-12 text-center text-muted py-5">
+                <i class="fas fa-graduation-cap fa-3x mb-3"></i>
+                <p>Aucune classe active pour ce jour</p>
+                <small>Vérifiez les classes dans la gestion des classes</small>
+            </div>
+        `;
+        visiblesElement.textContent = '0';
+        return;
+    }
+    
+    let html = '';
+    ateliersJour.forEach(atelier => {
+        const nbApprenants = atelier.apprenants ? atelier.apprenants.length : 0;
+        const presentsCount = compterPresents(atelier.id);
+        const enAttenteCount = nbApprenants - presentsCount;
+        
+        console.log(`📊 Classe ${atelier.id}: ${presentsCount}/${nbApprenants} présents`);
+        
+        // Header de la classe (cliquable pour déplier)
+        html += `
+            <div class="col-12" data-atelier-id="${atelier.id}" data-heure="${atelier.heure_debut}">
+                <div class="classe-card">
+                    <!-- Header cliquable -->
+                    <div class="classe-header" onclick="toggleClasseContent('${atelier.id}')">
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h6 class="mb-1">
+                                    <i class="fas fa-graduation-cap text-primary"></i> 
+                                    ${atelier.activite}
+                                    <span class="badge bg-info ms-2">${atelier.nom_classe}</span>
+                                </h6>
+                                <div class="stats-mini text-muted">
+                                    <i class="fas fa-clock"></i> ${atelier.heure_debut}-${atelier.heure_fin} 
+                                    <span class="ms-2"><i class="fas fa-user-tie"></i> ${atelier.encadrant}</span>
+                                </div>
+                            </div>
+                            <div class="col-4 text-end">
+                                <div class="d-flex justify-content-end align-items-center">
+                                                                        <div class="me-3" style=" border-radius: 8px; margin-right: 8px; padding: 2px 8px;">
+                                        <span class="badge" style="background-color: #ff8c00; color: white;">${compterPresentsTemporaires(atelier.id)}</span>
+                                    </div>
+                                    <div class="me-3">
+                                        <span class="badge bg-success">${presentsCount + compterPresentsTemporaires(atelier.id)}</span>
+                                        <span class="text-muted">/</span>
+                                        <span class="badge bg-secondary">${nbApprenants + (apprenantsTemporaires[atelier.id] ? Object.keys(apprenantsTemporaires[atelier.id]).length : 0)}</span>
+                                    </div>
+
+                                    <i class="fas fa-chevron-down chevron-indicator" id="chevron_${atelier.id}"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenu dépliable -->
+                    <div class="classe-content" id="content_${atelier.id}">
+                        <!-- Actions rapides -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <button class="btn btn-outline-primary btn-action-classe me-2" onclick="event.stopPropagation(); ouvrirModalAjoutApprenant('${atelier.id}', '${atelier.nom_classe}')">
+                                    <i class="fas fa-user-plus"></i> Ajouter apprenant
+                                </button>
+                                <button class="btn btn-outline-warning btn-action-classe" onclick="event.stopPropagation(); ouvrirModalApprenantTemporaire('${atelier.id}', '${atelier.nom_classe}')">
+                                    <i class="fas fa-sticky-note"></i> +Ajouter apprenant temporaire
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Liste des apprenants avec pointage intégré -->
+                        <div class="apprenant-list" id="apprenants_${atelier.id}">
+                            ${genererListeApprenants(atelier)}
+                        </div>
+                        
+                        <!-- Champ d'observation -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+
+                                <textarea class="form-control form-control-sm" id="observation_${atelier.id}" 
+                                          placeholder="Ajouter une observation pour cette classe..." 
+                                          rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    visiblesElement.textContent = ateliersJour.length.toString();
+    
+    // Configurer la sauvegarde automatique des observations après affichage
+    setTimeout(() => {
+        configurerSauvegardeObservations();
+    }, 100);
+}
+
+// Nouvelle fonction pour générer la liste des apprenants
+function genererListeApprenants(atelier) {
+    const apprenants = atelier.apprenants || [];
+    const temporaires = apprenantsTemporaires[atelier.id] || {};
+    
+    if (apprenants.length === 0 && Object.keys(temporaires).length === 0) {
+        return `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-user-slash fa-2x mb-2"></i>
+                <p>Aucun apprenant assigné à cette classe</p>
+                <small>Utilisez les boutons ci-dessus pour ajouter des apprenants</small>
+            </div>
+        `;
+    }
+    
+    let html = '<div class="row">';
+    
+    // Apprenants permanents existants
+    apprenants.forEach(numeroApprenant => {
+        const apprenant = trouverApprenantParNumero(numeroApprenant);
+        const nomComplet = apprenant ? apprenant.nom_complet : `Apprenant ${numeroApprenant}`;
+        const statut = obtenirStatutApprenant(atelier.id, numeroApprenant);
+
+        let classeStatut = '';
+        let iconeStatut = 'fas fa-hourglass-half text-warning';
+        let couleurStatut = 'status-pending';
+
+        if (statut === 'present') {
+            classeStatut = 'present';
+            iconeStatut = 'fas fa-check text-success';
+            couleurStatut = 'status-present';
+        } else if (statut === 'absent') {
+            classeStatut = 'absent';
+            iconeStatut = 'fas fa-times text-danger';
+            couleurStatut = 'status-absent';
+        }
+
+    // Construction du chemin de la photo : uniquement numéro apprenant (6 premiers caractères)
+    let numeroPhoto = numeroApprenant.substring(0, 6);
+    let photoJpg = `/photos_profils_apprenants/${numeroPhoto}.jpg`;
+    let photoJpeg = `/photos_profils_apprenants/${numeroPhoto}.jpeg`;
+    // Debug : afficher le chemin généré pour chaque apprenant
+    console.log(`[PHOTO DEBUG] Apprenant:`, numeroApprenant, '| JPG:', photoJpg, '| JPEG:', photoJpeg);
+        // Image par défaut selon le genre si connu, sinon default.jpg
+        let defaultPhoto = '/default_profil.jpg';
+        if (apprenant && apprenant.genre) {
+            if (apprenant.genre.toLowerCase() === 'f') {
+                defaultPhoto = '/photos_profils_apprenants/default_femme.jpg';
+            } else if (apprenant.genre.toLowerCase() === 'm') {
+                defaultPhoto = '/photos_profils_apprenants/default_homme.jpg';
+            }
+        }
+
+        // Balise img avec gestion du fallback jpg/jpeg/default
+        // On utilise onerror pour basculer de jpg -> jpeg -> default
+        let photoImg = `<img src="${photoJpg}"
+            alt="Photo de ${nomComplet}"
+            class="rounded-circle me-2" style="width:44px;height:44px;object-fit:cover;border:1px solid #ccc;"
+            onerror="if(this.src.indexOf('.jpg')>-1){this.src='${photoJpeg}'}else{this.onerror=null;this.src='${defaultPhoto}'}"
+        >`;
+
+        html += `
+            <div class="col-lg-4 col-md-6 col-12 mb-2">
+                <div class="apprenant-item-integre ${classeStatut}" data-atelier-id="${atelier.id}" data-apprenant-numero="${numeroApprenant}" onclick="basculerPresence('${atelier.id}', '${numeroApprenant}')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            ${photoImg}
+                            <div>
+                                <span class="status-indicator ${couleurStatut}"></span>
+                                <strong>${nomComplet}</strong><br>
+                                <small class="text-muted">N° ${numeroApprenant}</small>
+                            </div>
+                        </div>
+                        <div>
+                            <i class="${iconeStatut} fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Les apprenants temporaires n'ont JAMAIS de photo !
+    // Bloc réservé uniquement à l'affichage du nom/prénom et actions, sans balise <img> ni logique de photo
+    Object.entries(temporaires).forEach(([tempId, apprenant]) => {
+        const statut = apprenant.statut_presence || 'pending';
+        let classeStatut = '';
+        let iconeStatut = 'fas fa-hourglass-half text-warning';
+        let couleurStatut = 'status-pending';
+        if (statut === 'present') {
+            classeStatut = 'present';
+            iconeStatut = 'fas fa-check text-success';
+            couleurStatut = 'status-present';
+        }
+        html += `
+            <div class="col-lg-4 col-md-6 col-12 mb-2">
+                <div class="apprenant-item-integre apprenant-temporaire ${classeStatut}" data-atelier-id="${atelier.id}" data-temp-id="${tempId}" onclick="basculerPresenceTemporaire('${atelier.id}', '${tempId}')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge badge-temporaire">
+                                <i class="fas fa-sticky-note"></i> TEMP
+                            </span>
+                            <strong class="text-primary" style="font-size: 1.1rem;">${apprenant.nom} ${apprenant.prenom}</strong><br>
+                            <small class="text-warning">En attente d'inscription</small>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="${iconeStatut} fa-lg me-2"></i>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); redirigerVersInscription('${tempId}')" title="Inscrire définitivement">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); supprimerApprenantTemporaire('${atelier.id}', '${tempId}')" title="Supprimer">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    return html;
+}
+
+// Nouvelle fonction pour déplier/replier le contenu
+function toggleClasseContent(atelierId) {
+    const content = document.getElementById(`content_${atelierId}`);
+    const chevron = document.getElementById(`chevron_${atelierId}`);
+    const header = content.previousElementSibling;
+    
+    if (content.classList.contains('expanded')) {
+        // Replier
+        content.classList.remove('expanded');
+        chevron.classList.remove('expanded');
+        header.classList.remove('expanded');
+        sauvegarderEtatClasse(atelierId, false);
+    } else {
+        // Déplier
+        content.classList.add('expanded');
+        chevron.classList.add('expanded');
+        header.classList.add('expanded');
+        sauvegarderEtatClasse(atelierId, true);
+    }
+}
+
+function genererFiltresHeures() {
+    const container = document.getElementById('filtresHeures');
+    
+    // Garder le bouton "Tous"
+    const btnTous = container.querySelector('[data-heure="all"]');
+    container.innerHTML = '';
+    container.appendChild(btnTous);
+    
+    // Extraire les heures uniques
+    const heures = [...new Set(ateliersJour.map(a => a.heure_debut))].sort();
+    
+    heures.forEach(heure => {
+        const btn = document.createElement('button');
+        btn.className = 'btn filtre-heure';
+        btn.setAttribute('data-heure', heure);
+        btn.onclick = () => filtrerParHeure(heure);
+        btn.innerHTML = `<i class="fas fa-clock"></i> ${heure}`;
+        container.appendChild(btn);
+    });
+}
+
+function filtrerParHeure(heure) {
+    // Sauvegarder le créneau sélectionné
+    filtrageSauvegarde.creneauSelectionne = heure;
+    sauvegarderFiltrage();
+    
+    // Mettre à jour les boutons actifs
+    document.querySelectorAll('.filtre-heure').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-heure="${heure}"]`).classList.add('active');
+    
+    // Filtrer les classes (sélecteur corrigé pour cibler uniquement les cartes principales)
+    const classes = document.querySelectorAll('.col-12[data-atelier-id]');
+    let visibles = 0;
+    const classesVisibles = [];
+    
+    classes.forEach(card => {
+        if (heure === 'all' || card.getAttribute('data-heure') === heure) {
+            card.style.display = 'block';
+            visibles++;
+            classesVisibles.push(card.getAttribute('data-atelier-id'));
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // NOUVEAU: Auto-déplier les classes filtrées avec délai adapté à l'animation CSS
+    setTimeout(() => {
+        classesVisibles.forEach(atelierId => {
+            const content = document.getElementById(`content_${atelierId}`);
+            const chevron = document.getElementById(`chevron_${atelierId}`);
+            const header = content?.previousElementSibling;
+            
+            if (content) {
+                // Forcer l'expansion même si déjà ouverte pour s'assurer de la visibilité
+                content.classList.add('expanded');
+                if (chevron) chevron.classList.add('expanded');
+                if (header) header.classList.add('expanded');
+                
+                // Sauvegarder l'état dépliée
+                sauvegarderEtatClasse(atelierId, true);
+                
+                console.log(`🔧 Dépliement forcé pour classe ${atelierId}`);
+            }
+        });
+        console.log(`🔧 Auto-dépliement après filtrage: ${classesVisibles.length} classe(s)`);
+    }, 500); // Délai augmenté pour laisser le temps aux animations CSS
+    
+    // Mettre à jour le compteur de classes visibles
+    document.getElementById('ateliersVisibles').textContent = visibles.toString();
+}
+
+// Fonction pour basculer les présences (version optimisée)
+function basculerPresence(atelierId, numeroApprenant) {
+    console.log(`🎯 Clic détecté sur apprenant ${numeroApprenant} de la classe ${atelierId}`);
+    afficherDebugSynchronisation(`🎯 Clic: ${numeroApprenant} -> ${atelierId}`);
+    
+    if (!presences[atelierId]) {
+        presences[atelierId] = {};
+    }
+    
+    const statutActuel = presences[atelierId][numeroApprenant];
+    console.log(`📊 Statut actuel: ${statutActuel || 'pending'}`);
+    
+    // Simple toggle : présent ou non-présent (supprimé)
+    let nouveauStatut;
+    if (statutActuel === 'present') {
+        delete presences[atelierId][numeroApprenant];
+        nouveauStatut = 'pending';
+        console.log(`❌ Suppression présence pour ${numeroApprenant}`);
+        afficherDebugSynchronisation(`❌ ${numeroApprenant} -> absent`);
+    } else {
+        presences[atelierId][numeroApprenant] = 'present';
+        nouveauStatut = 'present';
+        console.log(`✅ Ajout présence pour ${numeroApprenant}`);
+        afficherDebugSynchronisation(`✅ ${numeroApprenant} -> présent`);
+    }
+    
+    // NOUVELLE APPROCHE: Mettre à jour seulement l'élément cliqué sans régénérer tout le HTML
+    mettreAJourElementApprenant(atelierId, numeroApprenant, nouveauStatut);
+    
+    mettreAJourModifications();
+    mettreAJourStatistiques();
+    
+    // Sauvegarde automatique après chaque clic
+    sauvegarderPointageTemporaire();
+}
+
+// NOUVELLE FONCTION: Mettre à jour un élément apprenant spécifique
+function mettreAJourElementApprenant(atelierId, numeroApprenant, statut) {
+    const element = document.querySelector(`[data-atelier-id="${atelierId}"][data-apprenant-numero="${numeroApprenant}"]`);
+    if (!element) {
+        console.warn(`⚠️ Élément apprenant non trouvé: ${numeroApprenant} dans ${atelierId}`);
+        return;
+    }
+    
+    // Supprimer les anciennes classes de statut
+    element.classList.remove('present', 'absent');
+    
+    // Trouver les éléments à mettre à jour
+    const statusIndicator = element.querySelector('.status-indicator');
+    const icone = element.querySelector('i[class*="fa-"]');
+    
+    // Appliquer le nouveau statut
+    let classeStatut = '';
+    let iconeClass = 'fas fa-hourglass-half text-warning';
+    let couleurStatut = 'status-pending';
+    
+    if (statut === 'present') {
+        classeStatut = 'present';
+        iconeClass = 'fas fa-check text-success';
+        couleurStatut = 'status-present';
+    } else if (statut === 'absent') {
+        classeStatut = 'absent';
+        iconeClass = 'fas fa-times text-danger';
+        couleurStatut = 'status-absent';
+    }
+    
+    // Mettre à jour l'élément
+    if (classeStatut) {
+        element.classList.add(classeStatut);
+    }
+    
+    if (statusIndicator) {
+        statusIndicator.className = `status-indicator ${couleurStatut}`;
+    }
+    
+    if (icone) {
+        icone.className = `${iconeClass} fa-lg`;
+    }
+    
+    // Mettre à jour les compteurs dans le header
+    const presentsCount = compterPresents(atelierId);
+    const headerCard = document.querySelector(`[data-atelier-id="${atelierId}"] .classe-header`);
+    if (headerCard) {
+        const badgeSuccess = headerCard.querySelector('.badge.bg-success');
+        if (badgeSuccess) {
+            // Inclure les temporaires dans le comptage
+            const presentsTemporaires = compterPresentsTemporaires(atelierId);
+            badgeSuccess.textContent = presentsCount + presentsTemporaires;
+        }
+    }
+    
+    console.log(`🔄 Élément mis à jour pour ${numeroApprenant}: ${statut}`);
+}
+
+// Fonctions utilitaires pour les statuts
+
+function obtenirStatutApprenant(atelierId, numeroApprenant) {
+    return presences[atelierId] && presences[atelierId][numeroApprenant] ? presences[atelierId][numeroApprenant] : 'pending';
+}
+
+function compterPresents(atelierId) {
+    if (!presences[atelierId]) return 0;
+    return Object.values(presences[atelierId]).filter(statut => statut === 'present').length;
+}
+
+function compterAbsents(atelierId) {
+    if (!presences[atelierId]) return 0;
+    return Object.values(presences[atelierId]).filter(statut => statut === 'absent').length;
+}
+
+function mettreAJourStatistiques() {
+    let totalApprenants = 0;
+    let totalPresents = 0;
+    
+    ateliersJour.forEach(atelier => {
+        // Compter les apprenants permanents
+        const nbApprenants = atelier.apprenants ? atelier.apprenants.length : 0;
+        totalApprenants += nbApprenants;
+        totalPresents += compterPresents(atelier.id);
+        
+        // Compter les apprenants temporaires
+        const nbTemporaires = apprenantsTemporaires[atelier.id] ? Object.keys(apprenantsTemporaires[atelier.id]).length : 0;
+        totalApprenants += nbTemporaires;
+        totalPresents += compterPresentsTemporaires(atelier.id);
+    });
+    
+    const totalEnAttente = totalApprenants - totalPresents;
+    
+    document.getElementById('totalApprenants').textContent = totalApprenants;
+    document.getElementById('totalPresents').textContent = totalPresents;
+    document.getElementById('totalEnAttente').textContent = totalEnAttente;
+}
+
+function mettreAJourModifications() {
+    // Compter les présents (permanents et temporaires)
+    let totalPresents = 0;
+    let totalApprenants = 0;
+    
+    ateliersJour.forEach(atelier => {
+        // Apprenants permanents
+        const nbApprenants = atelier.apprenants ? atelier.apprenants.length : 0;
+        totalApprenants += nbApprenants;
+        totalPresents += compterPresents(atelier.id);
+        
+        // Apprenants temporaires
+        const nbTemporaires = apprenantsTemporaires[atelier.id] ? Object.keys(apprenantsTemporaires[atelier.id]).length : 0;
+        totalApprenants += nbTemporaires;
+        totalPresents += compterPresentsTemporaires(atelier.id);
+    });
+    
+    // Compter les observations
+    let totalObservations = 0;
+    let totalClasses = ateliersJour.length;
+    
+    ateliersJour.forEach(atelier => {
+        const textareaElement = document.getElementById(`observation_${atelier.id}`);
+        if (textareaElement && textareaElement.value.trim() !== '') {
+            totalObservations++;
+        }
+    });
+    
+    // NOUVEAU: Vérifier les post-it restants
+    const postItRestants = verifierPostItRestants();
+    
+    // Mettre à jour les affichages
+    const btnValiderFinal = document.getElementById('btnValiderFinal');
+    const nbPresents = document.getElementById('nbPresents');
+    const nbTotalApprenants = document.getElementById('nbTotalApprenants');
+    const nbObservations = document.getElementById('nbObservations');
+    const nbTotalClasses = document.getElementById('nbTotalClasses');
+    const progressPresents = document.getElementById('progressPresents');
+    const progressObservations = document.getElementById('progressObservations');
+    const alertePostIt = document.getElementById('alertePostIt');
+    const messagePostIt = document.getElementById('messagePostIt');
+    
+    if (btnValiderFinal && nbPresents && nbTotalApprenants && nbObservations && nbTotalClasses) {
+        // Mettre à jour les compteurs
+        nbPresents.textContent = totalPresents;
+        nbTotalApprenants.textContent = totalApprenants;
+        nbObservations.textContent = totalObservations;
+        nbTotalClasses.textContent = totalClasses;
+        
+        // Calculer les pourcentages
+        const pourcentagePresents = totalApprenants > 0 ? (totalPresents / totalApprenants) * 100 : 0;
+        const pourcentageObservations = totalClasses > 0 ? (totalObservations / totalClasses) * 100 : 0;
+        
+        // Mettre à jour les barres de progression
+        progressPresents.style.width = pourcentagePresents + '%';
+        progressObservations.style.width = pourcentageObservations + '%';
+        
+        // NOUVEAU: Gestion de l'alerte post-it
+        if (postItRestants > 0) {
+            alertePostIt.style.display = 'block';
+            messagePostIt.textContent = `${postItRestants} apprenant(s) temporaire(s) à résoudre avant validation`;
+        } else {
+            alertePostIt.style.display = 'none';
+        }
+        
+        // État du bouton - MODIFIÉ pour inclure les post-it
+        if (totalPresents > 0 && postItRestants === 0) {
+            btnValiderFinal.disabled = false;
+            btnValiderFinal.classList.remove('btn-secondary');
+            btnValiderFinal.classList.add('btn-success');
+        } else {
+            btnValiderFinal.disabled = true;
+            btnValiderFinal.classList.remove('btn-success');
+            btnValiderFinal.classList.add('btn-secondary');
+        }
+    }
+    
+    // Mettre à jour le compteur global pour compatibilité
+    modificationsCount = totalPresents;
+}
+
+function ouvrirModalValidation() {
+    // Mettre à jour la date dans le modal
+    const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    };
+    document.getElementById('modalDateValidation').textContent = 
+        dateActuelle.toLocaleDateString('fr-FR', options);
+    
+    // Générer le récapitulatif
+    genererRecapitulatif();
+    
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('modalValidation'));
+    modal.show();
+}
+
+function genererRecapitulatif() {
+    const container = document.getElementById('recapitulatifModifications');
+    let html = '';
+    
+    ateliersJour.forEach(atelier => {
+        if (presences[atelier.id] && Object.keys(presences[atelier.id]).length > 0) {
+            // Compter les présents pour cette classe
+            const presentsCount = Object.values(presences[atelier.id]).filter(statut => statut === 'present').length;
+            
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tasks"></i> ${atelier.activite} - ${atelier.nom}
+                            <span class="text-muted">(${atelier.heure_debut} - ${atelier.heure_fin})</span>
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+            `;
+            
+            Object.entries(presences[atelier.id]).forEach(([numeroApprenant, statut]) => {
+                const apprenant = trouverApprenantParNumero(numeroApprenant);
+                const nomComplet = apprenant ? apprenant.nom_complet : `Apprenant ${numeroApprenant}`;
+                const couleur = statut === 'present' ? 'success' : 'danger';
+                const icone = statut === 'present' ? 'check' : 'times';
+                
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <span class="badge bg-${couleur}">
+                            <i class="fas fa-${icone}"></i> ${nomComplet}
+                        </span>
+                    </div>
+                `;
+            });
+            
+            // Ajouter le champ observation si il y a des présents
+            if (presentsCount > 0) {
+                html += `
+                        </div>
+                        <div class="mt-3">
+                            <label for="observation_${atelier.id}" class="form-label">
+                                <i class="fas fa-comment"></i> Détail/Observation (optionnel):
+                            </label>
+                            <textarea class="form-control" id="observation_${atelier.id}" 
+                                      placeholder="Ajouter une observation pour cette classe..." 
+                                      rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                `;
+            } else {
+                html += `
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+        }
+    });
+    
+    if (html === '') {
+        html = '<div class="alert alert-warning">Aucune modification à valider.</div>';
+    }
+    
+    container.innerHTML = html;
+    
+    // NOUVEAU: Configurer la sauvegarde automatique des observations après génération du HTML
+    setTimeout(() => {
+        configurerSauvegardeObservations();
+    }, 100); // Petit délai pour s'assurer que les éléments sont dans le DOM
+}
+
+function modifierPresences() {
+    // Fermer le modal
+    bootstrap.Modal.getInstance(document.getElementById('modalValidation')).hide();
+}
+
+async function validerDefinitivement() {
+    try {
+        // Collecter les observations pour chaque classe
+        const observations = {};
+        ateliersJour.forEach(atelier => {
+            if (presences[atelier.id]) {
+                const textareaElement = document.getElementById(`observation_${atelier.id}`);
+                if (textareaElement) {
+                    const observation = textareaElement.value.trim();
+                    if (observation) {
+                        observations[atelier.id] = observation;
+                    }
+                }
+            }
+        });
+        
+        // Préparer les données à envoyer
+        const donneesValidation = {
+            date: dateActuelle.toISOString().split('T')[0],
+            presences: presences,
+            observations: observations
+        };
+        
+        // Envoyer au serveur
+        const response = await fetch('/planning/api/valider-presences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(donneesValidation)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Succès avec message détaillé
+            let message = result.message || `${result.nombre_presences} présences validées avec succès !`;
+            
+            if (result.apprenants_ignores && result.apprenants_ignores.length > 0) {
+                message += `\n\nApprenants ignorés (déjà présents): ${result.apprenants_ignores.join(', ')}`;
+            }
+            
+            alert(message);
+            
+            // Réinitialiser
+            presences = {};
+            modificationsCount = 0;
+            document.getElementById('btnValider').classList.add('d-none');
+            
+            // Fermer le modal
+            bootstrap.Modal.getInstance(document.getElementById('modalValidation')).hide();
+            
+            // Rafraîchir l'affichage
+            afficherAteliers();
+            mettreAJourStatistiques();
+            
+        } else {
+            // Gestion des erreurs
+            if (result.redirect_to_inscription) {
+                // Apprenant non trouvé - redirection vers inscription
+                const confirmer = confirm(
+                    result.error + '\n\n' +
+                    'Voulez-vous aller à la page d\'inscription maintenant ?'
+                );
+                
+                if (confirmer) {
+                    window.location.href = '/inscriptions';
+                }
+            } else {
+                // Autre erreur
+                alert('Erreur lors de la validation : ' + result.error);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la validation des présences');
+    }
+}
+
+// Nouvelle fonction de validation directe (sans modal)
+async function validerDefinitivementDirect() {
+    // NOUVEAU: Vérifier les post-it avant validation
+    const postItRestants = verifierPostItRestants();
+    if (postItRestants > 0) {
+        alert(`Impossible de valider : ${postItRestants} apprenant(s) temporaire(s) en attente.\n\n` +
+              'Veuillez soit les inscrire définitivement, soit les supprimer avant de valider.');
+        return;
+    }
+    
+    // Compter les présences (permanents + temporaires)
+    const nbPresencesPermanents = Object.values(presences).reduce((total, atelierPresences) => 
+        total + Object.values(atelierPresences).filter(statut => statut === 'present').length, 0);
+    
+    const nbPresencesTemporaires = Object.values(apprenantsTemporaires).reduce((total, temporaires) => 
+        total + Object.values(temporaires).filter(app => app.statut_presence === 'present').length, 0);
+    
+    const nbPresencesTotales = nbPresencesPermanents + nbPresencesTemporaires;
+    
+    if (nbPresencesTotales === 0) {
+        alert('Aucune présence à valider.');
+        return;
+    }
+    
+    const confirmer = confirm(
+        `Vous allez valider ${nbPresencesTotales} présence(s) pour le ${dateActuelle.toLocaleDateString('fr-FR')} ` +
+        `(${nbPresencesPermanents} permanents${nbPresencesTemporaires > 0 ? ` + ${nbPresencesTemporaires} temporaires` : ''}).\n\n` +
+        'Cette action est définitive. Continuer ?'
+    );
+    
+    if (!confirmer) {
+        return;
+    }
+    
+    try {
+        // Désactiver le bouton pendant la validation
+        const btnValiderFinal = document.getElementById('btnValiderFinal');
+        const texteBoutonOriginal = btnValiderFinal.innerHTML;
+        btnValiderFinal.disabled = true;
+        btnValiderFinal.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validation...';
+        
+        // Collecter les observations actuelles directement depuis les champs
+        const observations = {};
+        let observationsCollectees = 0;
+        
+        ateliersJour.forEach(atelier => {
+            if (presences[atelier.id]) {
+                const textareaElement = document.getElementById(`observation_${atelier.id}`);
+                if (textareaElement) {
+                    const observation = textareaElement.value.trim();
+                    if (observation) {
+                        observations[atelier.id] = observation;
+                        observationsCollectees++;
+                        console.log(`📝 Observation collectée pour ${atelier.id}: "${observation}"`);
+                    }
+                }
+            }
+        });
+        
+        console.log(`📊 Total observations collectées: ${observationsCollectees}`);
+        
+        // Préparer les données à envoyer
+        const donneesValidation = {
+            date: dateActuelle.toISOString().split('T')[0],
+            presences: presences,
+            observations: observations
+        };
+        
+        // Envoyer au serveur
+        const response = await fetch('/planning/api/valider-presences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(donneesValidation)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Succès avec message détaillé
+            let message = result.message || `${result.nombre_presences} présences validées avec succès !`;
+            
+            if (result.apprenants_ignores && result.apprenants_ignores.length > 0) {
+                message += `\n\nApprenants ignorés (déjà présents): ${result.apprenants_ignores.join(', ')}`;
+            }
+            
+            alert(message);
+            
+            // IMPORTANT: Restaurer le bouton AVANT la réinitialisation
+            const btnValiderFinal = document.getElementById('btnValiderFinal');
+            if (btnValiderFinal) {
+                btnValiderFinal.innerHTML = '<i class="fas fa-save"></i> Valider et enregistrer';
+                btnValiderFinal.disabled = true;
+                btnValiderFinal.classList.remove('btn-success');
+                btnValiderFinal.classList.add('btn-secondary');
+            }
+            
+            // Réinitialiser
+            presences = {};
+            modificationsCount = 0;
+            
+            // Vider les observations
+            ateliersJour.forEach(atelier => {
+                const textareaElement = document.getElementById(`observation_${atelier.id}`);
+                if (textareaElement) {
+                    textareaElement.value = '';
+                }
+            });
+            
+            // Supprimer la sauvegarde temporaire
+            localStorage.removeItem('pointage_temporaire');
+            
+            // Rafraîchir l'affichage
+            afficherAteliers();
+            mettreAJourStatistiques();
+            mettreAJourModifications();
+            
+        } else {
+            // Gestion des erreurs
+            if (result.redirect_to_inscription) {
+                // Apprenant non trouvé - redirection vers inscription
+                const confirmer = confirm(
+                    result.error + '\n\n' +
+                    'Voulez-vous aller à la page d\'inscription maintenant ?'
+                );
+                
+                if (confirmer) {
+                    window.location.href = '/inscriptions';
+                }
+            } else {
+                // Autre erreur
+                alert('Erreur lors de la validation : ' + result.error);
+                
+                // Restaurer le bouton en cas d'erreur
+                const btnValiderFinal = document.getElementById('btnValiderFinal');
+                if (btnValiderFinal) {
+                    btnValiderFinal.innerHTML = '<i class="fas fa-save"></i> Valider et enregistrer';
+                    btnValiderFinal.disabled = modificationsCount === 0;
+                    if (modificationsCount > 0) {
+                        btnValiderFinal.classList.add('btn-success');
+                        btnValiderFinal.classList.remove('btn-secondary');
+                    }
+                }
+            }
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la validation des présences');
+        
+        // En cas d'erreur, restaurer le bouton original
+        const btnValiderFinal = document.getElementById('btnValiderFinal');
+        if (btnValiderFinal) {
+            btnValiderFinal.innerHTML = '<i class="fas fa-save"></i> Valider et enregistrer';
+            btnValiderFinal.disabled = modificationsCount === 0;
+            if (modificationsCount > 0) {
+                btnValiderFinal.classList.add('btn-success');
+                btnValiderFinal.classList.remove('btn-secondary');
+            }
+        }
+    }
+    // Pas de finally block - la restauration du bouton se fait seulement en cas d'erreur
+    // En cas de succès, le bouton reste dans l'état défini par mettreAJourModifications()
+}
+
+// Fonctions utilitaires
+function trouverApprenantParNumero(numero) {
+    // Cette fonction devrait chercher dans la liste des apprenants
+    // Pour l'instant, on retourne un objet basique
+    return {
+        numero: numero,
+        nom_complet: `Apprenant ${numero}`
+    };
+}
+
+// Liste des apprenants (à charger depuis le backend)
+const apprenants = [
+    {% for apprenant in apprenants %}
+    {
+        numero: "{{ apprenant.numero }}",
+        nom: "{{ apprenant.nom|trim }}",
+        prenom: "{{ apprenant.prenom|trim }}",
+        nom_complet: "{{ apprenant.nom|trim }} {{ apprenant.prenom|trim }}"  // MODIFIÉ: Format NOM Prénom
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Liste des classes (à charger depuis le backend)
+const classes = [
+    {% for classe in classes %}
+    {
+        id: {{ classe.id }},
+        nom: "{{ classe.nom }}",
+        activite: "{{ classe.activite }}",
+        encadrant: "{{ classe.encadrant }}",
+        jours: {{ classe.jours|tojson }},
+        heure_debut: "{{ classe.heure_debut }}",
+        heure_fin: "{{ classe.heure_fin }}",
+        active: {{ classe.active|lower }},
+        apprenants: {{ classe.apprenants|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Mettre à jour la fonction pour utiliser la vraie liste
+function trouverApprenantParNumero(numero) {
+    const apprenant = apprenants.find(a => a.numero === numero);
+    if (apprenant) {
+        return {
+            numero: apprenant.numero,
+            nom: apprenant.nom,
+            prenom: apprenant.prenom,
+            nom_complet: `${apprenant.nom} ${apprenant.prenom}`.trim()  // MODIFIÉ: Format NOM Prénom
+        };
+    }
+    return {
+        numero: numero,
+        nom_complet: `Apprenant ${numero}`
+    };
+}
+
+// Variables pour la gestion d'ajout d'apprenants
+let classeEnCoursAjout = null;
+
+// Fonctions pour l'ajout d'apprenants
+function ouvrirModalAjoutApprenant(atelierId, nomClasse) {
+    // Trouver la classe correspondante
+    classeEnCoursAjout = classes.find(c => `classe_${c.id}` === atelierId);
+    
+    if (!classeEnCoursAjout) {
+        alert('Classe non trouvée');
+        return;
+    }
+    
+    document.getElementById('modalNomClasse').textContent = nomClasse;
+    
+    // Afficher les apprenants déjà assignés
+    afficherApprenantsAssignes();
+    
+    // Afficher tous les apprenants disponibles
+    afficherApprenantsDisponibles();
+    
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAjoutApprenant'));
+    modal.show();
+}
+
+function afficherApprenantsAssignes() {
+    const container = document.getElementById('listeApprenantsAssignes');
+    
+    if (!classeEnCoursAjout.apprenants || classeEnCoursAjout.apprenants.length === 0) {
+        container.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> Aucun apprenant assigné pour le moment</p>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    classeEnCoursAjout.apprenants.forEach(numero => {
+        const apprenant = trouverApprenantParNumero(numero);
+        if (!apprenant) return;
+        // Générer vignette photo
+        const numeroPhoto = numero.substring(0,6);
+        let defaultPhoto = '/default_profil.jpg';
+        if (apprenant.genre) {
+            if (apprenant.genre.toLowerCase() === 'f') defaultPhoto = '/photos_profils_apprenants/default_femme.jpg';
+            else if (apprenant.genre.toLowerCase() === 'm') defaultPhoto = '/photos_profils_apprenants/default_homme.jpg';
+        }
+        const photoJpg = `/photos_profils_apprenants/${numeroPhoto}.jpg`;
+        const photoJpeg = `/photos_profils_apprenants/${numeroPhoto}.jpeg`;
+        const photoImg = `<img src="${photoJpg}" alt="Photo de ${apprenant.nom_complet}" class="rounded-circle me-2" style="width:36px;height:36px;object-fit:cover;border:1px solid #ccc;" onerror=\"if(this.src.indexOf('.jpg')>-1){this.src='${photoJpeg}'}else{this.onerror=null;this.src='${defaultPhoto}'}\">`;
+        html += `
+            <div class="col-md-6 mb-2">
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light">
+                    <span class="d-flex align-items-center">${photoImg}<strong>${numero}</strong> - ${apprenant.nom_complet}</span>
+                    <button class="btn btn-outline-danger btn-sm" onclick="retirerApprenantDeClasse('${numero}')" title="Retirer de la classe">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function afficherApprenantsDisponibles(filtre = '') {
+    const container = document.getElementById('listeApprenantsDisponibles');
+    
+    // Filtrer les apprenants déjà assignés à cette classe
+    const apprenantsAssignes = classeEnCoursAjout.apprenants || [];
+    let apprenantsDisponibles = apprenants.filter(a => !apprenantsAssignes.includes(a.numero));
+    
+    // Appliquer le filtre de recherche
+    if (filtre) {
+        const recherche = filtre.toLowerCase();
+        apprenantsDisponibles = apprenantsDisponibles.filter(a => 
+            a.nom_complet.toLowerCase().includes(recherche) || 
+            a.numero.toLowerCase().includes(recherche)
+        );
+    }
+    
+    if (apprenantsDisponibles.length === 0) {
+        container.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> Aucun apprenant disponible</p>';
+        return;
+    }
+    
+    // Trier : nouvelles inscriptions d'abord (numéros plus récents)
+    apprenantsDisponibles.sort((a, b) => b.numero.localeCompare(a.numero));
+    
+    let html = '<div class="row">';
+    apprenantsDisponibles.forEach(apprenant => {
+        const numeroPhoto = apprenant.numero.substring(0,6);
+        let defaultPhoto = '/default_profil.jpg';
+        if (apprenant.genre) {
+            if (apprenant.genre.toLowerCase() === 'f') defaultPhoto = '/photos_profils_apprenants/default_femme.jpg';
+            else if (apprenant.genre.toLowerCase() === 'm') defaultPhoto = '/photos_profils_apprenants/default_homme.jpg';
+        }
+        const photoJpg = `/photos_profils_apprenants/${numeroPhoto}.jpg`;
+        const photoJpeg = `/photos_profils_apprenants/${numeroPhoto}.jpeg`;
+        const photoImg = `<img src="${photoJpg}" alt="Photo de ${apprenant.nom_complet}" class="rounded-circle me-2" style="width:36px;height:36px;object-fit:cover;border:1px solid #ccc;" onerror=\"if(this.src.indexOf('.jpg')>-1){this.src='${photoJpeg}'}else{this.onerror=null;this.src='${defaultPhoto}'}\">`;
+        html += `
+            <div class="col-md-6 mb-2">
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded hover-bg-light cursor-pointer" onclick="ajouterApprenantAClasse('${apprenant.numero}')">
+                    <span class="d-flex align-items-center">${photoImg}<strong>${apprenant.numero}</strong> - ${apprenant.nom_complet}</span>
+                    <button class="btn btn-outline-success btn-sm" onclick="event.stopPropagation(); ajouterApprenantAClasse('${apprenant.numero}')" title="Ajouter à la classe">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function rechercherApprenantsDisponibles() {
+    const filtre = document.getElementById('rechercheApprenant').value;
+    afficherApprenantsDisponibles(filtre);
+}
+
+async function ajouterApprenantAClasse(numeroApprenant) {
+    try {
+        const response = await fetch('/planning/api/ajouter-apprenant-classe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                classe_id: classeEnCoursAjout.id,
+                numero_apprenant: numeroApprenant
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Mettre à jour la classe locale
+            if (!classeEnCoursAjout.apprenants) {
+                classeEnCoursAjout.apprenants = [];
+            }
+            classeEnCoursAjout.apprenants.push(numeroApprenant);
+            
+            // Mettre à jour les classes globales
+            const classeIndex = classes.findIndex(c => c.id === classeEnCoursAjout.id);
+            if (classeIndex !== -1) {
+                classes[classeIndex] = classeEnCoursAjout;
+            }
+            
+            // Rafraîchir l'affichage du modal
+            afficherApprenantsAssignes();
+            afficherApprenantsDisponibles(document.getElementById('rechercheApprenant').value);
+            
+            // Rafraîchir l'affichage principal
+            afficherAteliers();
+            
+        } else {
+            alert('Erreur: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'ajout de l\'apprenant');
+    }
+}
+
+async function retirerApprenantDeClasse(numeroApprenant) {
+    
+    try {
+        const response = await fetch('/planning/api/retirer-apprenant-classe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                classe_id: classeEnCoursAjout.id,
+                numero_apprenant: numeroApprenant
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Mettre à jour la classe locale
+            classeEnCoursAjout.apprenants = classeEnCoursAjout.apprenants.filter(num => num !== numeroApprenant);
+            
+            // Mettre à jour les classes globales
+            const classeIndex = classes.findIndex(c => c.id === classeEnCoursAjout.id);
+            if (classeIndex !== -1) {
+                classes[classeIndex] = classeEnCoursAjout;
+            }
+            
+            // Rafraîchir l'affichage du modal
+            afficherApprenantsAssignes();
+            afficherApprenantsDisponibles(document.getElementById('rechercheApprenant').value);
+            
+            // Rafraîchir l'affichage principal
+            afficherAteliers();
+            
+            // NOUVEAU: Garder le menu dépliable ouvert après la suppression
+            setTimeout(() => {
+                const classeId = `classe_${classeEnCoursAjout.id}`;
+                const content = document.getElementById(`content_${classeId}`);
+                const chevron = document.getElementById(`chevron_${classeId}`);
+                const header = content?.previousElementSibling;
+                
+                if (content && chevron && header) {
+                    content.classList.add('expanded');
+                    chevron.classList.add('expanded');
+                    header.classList.add('expanded');
+                    console.log(`🔧 Menu dépliable maintenu ouvert après retrait pour ${classeId}`);
+                }
+            }, 100);
+            
+            // alert('Apprenant retiré avec succès de la classe !'); // Alerte de succès supprimée
+        } else {
+            alert('Erreur: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors du retrait de l\'apprenant');
+    }
+}
+
+// ========== FONCTIONS DE RECHERCHE GLOBALE D'APPRENANTS ==========
+
+function rechercherApprenantGlobal(terme) {
+    const inputElement = document.getElementById('rechercheApprenantGlobale');
+    const resultatsDiv = document.getElementById('resultatsRechercheGlobale');
+    const listeResultats = document.getElementById('listeResultatsGlobale');
+    
+    // Si le terme est vide, masquer les résultats
+    if (!terme || terme.trim().length < 2) {
+        resultatsDiv.style.display = 'none';
+        return;
+    }
+    
+    // Rechercher dans tous les apprenants assignés aux classes du jour
+    const resultats = [];
+    const termeNormalise = terme.toLowerCase().trim();
+    
+    ateliersJour.forEach(atelier => {
+        if (atelier.apprenants && atelier.apprenants.length > 0) {
+            atelier.apprenants.forEach(numeroApprenant => {
+                const apprenant = trouverApprenantParNumero(numeroApprenant);
+                if (apprenant && correspondRechercheGlobale(apprenant, termeNormalise)) {
+                    // Vérifier si ce résultat n'existe pas déjà (au cas où l'apprenant serait dans plusieurs classes)
+                    const existeDeja = resultats.some(r => r.apprenant.numero === apprenant.numero);
+                    if (!existeDeja) {
+                        resultats.push({
+                            apprenant: apprenant,
+                            atelier: atelier,
+                            score: calculerScoreRecherche(apprenant, termeNormalise)
+                        });
+                    }
+                }
+            });
+        }
+    });
+    
+    // Trier par score de pertinence et limiter à 8 résultats
+    resultats.sort((a, b) => b.score - a.score);
+    const resultatsLimites = resultats.slice(0, 8);
+    
+    // Afficher les résultats
+    afficherResultatsRechercheGlobale(resultatsLimites);
+}
+
+function correspondRechercheGlobale(apprenant, terme) {
+    const nom = (apprenant.nom || '').toLowerCase();
+    const prenom = (apprenant.prenom || '').toLowerCase();
+    const numero = (apprenant.numero || '').toLowerCase();
+    const nomComplet = (apprenant.nom_complet || '').toLowerCase();
+    
+    return nom.includes(terme) || 
+           prenom.includes(terme) || 
+           numero.includes(terme) || 
+           nomComplet.includes(terme);
+}
+
+function calculerScoreRecherche(apprenant, terme) {
+    let score = 0;
+    const nom = (apprenant.nom || '').toLowerCase();
+    const prenom = (apprenant.prenom || '').toLowerCase();
+    const numero = (apprenant.numero || '').toLowerCase();
+    
+    // Score plus élevé si le terme correspond exactement
+    if (nom === terme || prenom === terme) score += 100;
+    if (numero === terme) score += 150;
+    
+    // Score moyen si le terme est au début
+    if (nom.startsWith(terme) || prenom.startsWith(terme)) score += 50;
+    if (numero.startsWith(terme)) score += 75;
+    
+    // Score faible si le terme est contenu
+    if (nom.includes(terme)) score += 10;
+    if (prenom.includes(terme)) score += 10;
+    if (numero.includes(terme)) score += 15;
+    
+    return score;
+}
+
+function afficherResultatsRechercheGlobale(resultats) {
+    const resultatsDiv = document.getElementById('resultatsRechercheGlobale');
+    const listeResultats = document.getElementById('listeResultatsGlobale');
+    
+    if (resultats.length === 0) {
+        listeResultats.innerHTML = `
+            <div class="list-group-item text-muted text-center">
+                <i class="fas fa-search"></i> Aucun apprenant trouvé
+            </div>
+        `;
+        resultatsDiv.style.display = 'block';
+        return;
+    }
+    
+    let html = '';
+    resultats.forEach(resultat => {
+        const apprenant = resultat.apprenant;
+        const atelier = resultat.atelier;
+        
+        html += `
+            <div class="list-group-item list-group-item-action cursor-pointer hover-bg-light" 
+                 onclick="selectionnerApprenantRecherche('${apprenant.numero}', '${atelier.id}')">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">${apprenant.nom_complet}</h6>
+                        <small class="text-muted">N° ${apprenant.numero}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-info text-dark">${atelier.nom_classe || atelier.activite}</span>
+                        <br><small class="text-muted">${atelier.heure_debut} - ${atelier.heure_fin}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    listeResultats.innerHTML = html;
+    resultatsDiv.style.display = 'block';
+}
+
+function selectionnerApprenantRecherche(numeroApprenant, atelierId) {
+    // Fermer les résultats de recherche
+    document.getElementById('resultatsRechercheGlobale').style.display = 'none';
+    document.getElementById('rechercheApprenantGlobale').value = '';
+    
+    // Déplier automatiquement la classe contenant l'apprenant
+    const content = document.getElementById(`content_${atelierId}`);
+    const chevron = document.getElementById(`chevron_${atelierId}`);
+    const header = content.previousElementSibling;
+    
+    if (!content.classList.contains('expanded')) {
+        content.classList.add('expanded');
+        chevron.classList.add('expanded');
+        header.classList.add('expanded');
+    }
+    
+    // Attendre un court délai pour que l'affichage se mette à jour
+    setTimeout(() => {
+        // Trouver l'élément de l'apprenant et le mettre en évidence
+        const apprenantElements = document.querySelectorAll('.apprenant-item-integre');
+        apprenantElements.forEach(element => {
+            // Vérifier si cet élément correspond à l'apprenant recherché
+            const small = element.querySelector('small');
+            if (small && small.textContent.includes(numeroApprenant)) {
+                // Ajouter un effet de surbrillance temporaire
+                element.style.border = '3px solid #007bff';
+                element.style.backgroundColor = '#e7f3ff';
+                
+                // Scroll vers l'élément
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Retirer la surbrillance après 3 secondes
+                setTimeout(() => {
+                    element.style.border = '';
+                    element.style.backgroundColor = '';
+                }, 3000);
+            }
+        });
+    }, 500);
+}
+
+function effacerRechercheGlobale() {
+    document.getElementById('rechercheApprenantGlobale').value = '';
+    document.getElementById('resultatsRechercheGlobale').style.display = 'none';
+}
+
+// Ajouter un événement pour fermer les résultats si on clique ailleurs
+document.addEventListener('click', function(event) {
+    const searchContainer = document.getElementById('rechercheApprenantGlobale').closest('.card');
+    if (!searchContainer.contains(event.target)) {
+        document.getElementById('resultatsRechercheGlobale').style.display = 'none';
+    }
+});
+
+// Gérer les touches du clavier pour la navigation
+document.addEventListener('keydown', function(event) {
+    if (event.ctrlKey && event.key === 'f') {
+        event.preventDefault();
+        document.getElementById('rechercheApprenantGlobale').focus();
+    }
+});
+
+// ===== FONCTIONS POUR APPRENANTS TEMPORAIRES =====
+
+// Mettre à jour l'aperçu de l'affichage nom/prénom
+function mettreAJourApercu() {
+    const nom = document.getElementById('nomTemporaire').value.trim().toUpperCase();
+    const prenom = document.getElementById('prenomTemporaire').value.trim();
+    
+    const apercu = document.getElementById('apercuNomPrenom');
+    
+    if (nom && prenom) {
+        // Affichage : NOM Prénom (priorité au nom)
+        apercu.textContent = `${nom} ${prenom}`;
+        apercu.className = 'text-success fw-bold';
+    } else if (nom) {
+        apercu.textContent = `${nom} [Prénom]`;
+        apercu.className = 'text-warning fw-bold';
+    } else if (prenom) {
+        apercu.textContent = `[NOM] ${prenom}`;
+        apercu.className = 'text-warning fw-bold';
+    } else {
+        apercu.textContent = '[NOM Prénom]';
+        apercu.className = 'text-muted fw-bold';
+    }
+}
+
+// Ouvrir le modal d'ajout d'apprenant temporaire
+function ouvrirModalApprenantTemporaire(classeId, nomClasse) {
+    classeEnCoursTemporaire = classeId;
+    document.getElementById('modalClasseTemporaire').textContent = nomClasse;
+    document.getElementById('nomTemporaire').value = '';
+    document.getElementById('prenomTemporaire').value = '';
+    
+    // Réinitialiser l'aperçu
+    mettreAJourApercu();
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalApprenantTemporaire'));
+    modal.show();
+    
+    // Focus sur le champ nom (priorité au nom)
+    setTimeout(() => {
+        document.getElementById('nomTemporaire').focus();
+    }, 300);
+}
+
+// Ajouter un apprenant temporaire
+function ajouterApprenantTemporaire() {
+    const nom = document.getElementById('nomTemporaire').value.trim().toUpperCase();
+    const prenom = document.getElementById('prenomTemporaire').value.trim();
+    
+    if (!nom || !prenom) {
+        alert('Veuillez saisir le nom et le prénom');
+        return;
+    }
+    
+    // Vérifier l'unicité dans la même classe
+    if (apprenantsTemporaires[classeEnCoursTemporaire]) {
+        const existe = Object.values(apprenantsTemporaires[classeEnCoursTemporaire]).some(app => 
+            app.nom === nom && app.prenom.toLowerCase() === prenom.toLowerCase()
+        );
+        if (existe) {
+            alert('Cet apprenant temporaire existe déjà dans cette classe');
+            return;
+        }
+    }
+    
+    // Créer l'ID temporaire unique
+    const tempId = `temp_${tempIdCounter++}_${Date.now()}`;
+    
+    // Initialiser la structure si nécessaire
+    if (!apprenantsTemporaires[classeEnCoursTemporaire]) {
+        apprenantsTemporaires[classeEnCoursTemporaire] = {};
+    }
+    
+    // Ajouter l'apprenant temporaire
+    apprenantsTemporaires[classeEnCoursTemporaire][tempId] = {
+        nom: nom,
+        prenom: prenom,
+        statut_presence: 'present' // Marqué comme présent automatiquement
+    };
+    
+    console.log(`➕ Apprenant temporaire ajouté: ${prenom} ${nom} (${tempId})`);
+    afficherDebugSynchronisation(`➕ Temp ajouté: ${prenom} ${nom}`);
+    
+    // Fermer le modal
+    bootstrap.Modal.getInstance(document.getElementById('modalApprenantTemporaire')).hide();
+    
+    // Rafraîchir l'affichage
+    afficherAteliers();
+    mettreAJourStatistiques();
+    mettreAJourModifications();
+    
+    // NOUVEAU: Garder le menu dépliable ouvert après l'ajout
+    setTimeout(() => {
+        const content = document.getElementById(`content_${classeEnCoursTemporaire}`);
+        const chevron = document.getElementById(`chevron_${classeEnCoursTemporaire}`);
+        const header = content?.previousElementSibling;
+        
+        if (content && chevron && header) {
+            content.classList.add('expanded');
+            chevron.classList.add('expanded');
+            header.classList.add('expanded');
+            console.log(`🔧 Menu dépliable maintenu ouvert pour ${classeEnCoursTemporaire}`);
+        }
+    }, 100);
+    
+    // Sauvegarder immédiatement
+    sauvegarderPointageTemporaire();
+}
+
+// Supprimer un apprenant temporaire
+function supprimerApprenantTemporaire(classeId, tempId) {
+    const apprenant = apprenantsTemporaires[classeId]?.[tempId];
+    if (!apprenant) return;
+    
+    const confirmer = confirm(`Supprimer l'apprenant temporaire ${apprenant.prenom} ${apprenant.nom} ?`);
+    if (!confirmer) return;
+    
+    // Supprimer de la structure
+    delete apprenantsTemporaires[classeId][tempId];
+    
+    // Nettoyer la structure si vide
+    if (Object.keys(apprenantsTemporaires[classeId]).length === 0) {
+        delete apprenantsTemporaires[classeId];
+    }
+    
+    console.log(`❌ Apprenant temporaire supprimé: ${apprenant.prenom} ${apprenant.nom}`);
+    afficherDebugSynchronisation(`❌ Temp supprimé: ${apprenant.prenom} ${apprenant.nom}`);
+    
+    // Rafraîchir l'affichage
+    afficherAteliers();
+    mettreAJourStatistiques();
+    mettreAJourModifications();
+    
+    // NOUVEAU: Garder le menu dépliable ouvert après la suppression
+    setTimeout(() => {
+        const content = document.getElementById(`content_${classeId}`);
+        const chevron = document.getElementById(`chevron_${classeId}`);
+        const header = content?.previousElementSibling;
+        
+        if (content && chevron && header) {
+            content.classList.add('expanded');
+            chevron.classList.add('expanded');
+            header.classList.add('expanded');
+            console.log(`🔧 Menu dépliable maintenu ouvert après suppression pour ${classeId}`);
+        }
+    }, 100);
+    
+    // Sauvegarder immédiatement
+    sauvegarderPointageTemporaire();
+}
+
+// Rediriger vers inscription avec pré-remplissage
+function redirigerVersInscription(tempId) {
+    // Trouver l'apprenant temporaire
+    let apprenantTrouve = null;
+    let classeTrouvee = null;
+    
+    for (const [classeId, temporaires] of Object.entries(apprenantsTemporaires)) {
+        if (temporaires[tempId]) {
+            apprenantTrouve = temporaires[tempId];
+            classeTrouvee = classeId;
+            break;
+        }
+    }
+    
+    if (!apprenantTrouve) {
+        alert('Apprenant temporaire non trouvé');
+        return;
+    }
+    
+    // Sauvegarder les données temporaires avant redirection
+    sauvegarderPointageTemporaire();
+    
+    // Construire l'URL avec paramètres pour la page d'ajout d'inscription
+    const url = `/inscriptions/inserer?nom=${encodeURIComponent(apprenantTrouve.nom)}&prenom=${encodeURIComponent(apprenantTrouve.prenom)}&retour=pointage&classe_id=${encodeURIComponent(classeTrouvee)}&temp_id=${encodeURIComponent(tempId)}`;
+    
+    // Confirmer la redirection
+    const confirmer = confirm(
+        `Rediriger vers la page d'inscription pour inscrire définitivement ${apprenantTrouve.prenom} ${apprenantTrouve.nom} ?\n\n` +
+        'Les champs nom et prénom seront pré-remplis automatiquement.'
+    );
+    
+    if (confirmer) {
+        window.location.href = url;
+    }
+}
+
+// Basculer présence pour temporaire (version optimisée)
+function basculerPresenceTemporaire(classeId, tempId) {
+    console.log(`🎯 Clic temporaire: ${tempId} dans ${classeId}`);
+    afficherDebugSynchronisation(`🎯 Clic temp: ${tempId}`);
+    
+    if (!apprenantsTemporaires[classeId] || !apprenantsTemporaires[classeId][tempId]) {
+        console.error('Apprenant temporaire non trouvé');
+        return;
+    }
+    
+    const statutActuel = apprenantsTemporaires[classeId][tempId].statut_presence;
+    
+    // Toggle simple: présent ou undefined (non marqué)
+    let nouveauStatut;
+    if (statutActuel === 'present') {
+        apprenantsTemporaires[classeId][tempId].statut_presence = undefined;
+        nouveauStatut = 'pending';
+        console.log(`❌ Temporaire ${tempId} -> non marqué`);
+        afficherDebugSynchronisation(`❌ Temp ${tempId} -> non marqué`);
+    } else {
+        apprenantsTemporaires[classeId][tempId].statut_presence = 'present';
+        nouveauStatut = 'present';
+        console.log(`✅ Temporaire ${tempId} -> présent`);
+        afficherDebugSynchronisation(`✅ Temp ${tempId} -> présent`);
+    }
+    
+    // NOUVELLE APPROCHE: Mettre à jour seulement l'élément cliqué
+    mettreAJourElementApprenantTemporaire(classeId, tempId, nouveauStatut);
+    
+    mettreAJourStatistiques();
+    mettreAJourModifications();
+    
+    // Sauvegarder immédiatement
+    sauvegarderPointageTemporaire();
+}
+
+// NOUVELLE FONCTION: Mettre à jour un élément apprenant temporaire spécifique
+function mettreAJourElementApprenantTemporaire(classeId, tempId, statut) {
+    const element = document.querySelector(`[data-atelier-id="${classeId}"][data-temp-id="${tempId}"]`);
+    if (!element) {
+        console.warn(`⚠️ Élément apprenant temporaire non trouvé: ${tempId} dans ${classeId}`);
+        return;
+    }
+    
+    // Supprimer les anciennes classes de statut
+    element.classList.remove('present', 'absent');
+    
+    // Trouver l'icône à mettre à jour
+    const icone = element.querySelector('i[class*="fa-"]');
+    
+    // Appliquer le nouveau statut
+    let classeStatut = '';
+    let iconeClass = 'fas fa-hourglass-half text-warning';
+    
+    if (statut === 'present') {
+        classeStatut = 'present';
+        iconeClass = 'fas fa-check text-success';
+    }
+    
+    // Mettre à jour l'élément
+    if (classeStatut) {
+        element.classList.add(classeStatut);
+    }
+    
+    if (icone) {
+        icone.className = `${iconeClass} fa-lg me-2`;
+    }
+    
+    // Mettre à jour les compteurs dans le header
+    const presentsCount = compterPresents(classeId);
+    const presentsTemporaires = compterPresentsTemporaires(classeId);
+    const headerCard = document.querySelector(`[data-atelier-id="${classeId}"] .classe-header`);
+    if (headerCard) {
+        const badgeSuccess = headerCard.querySelector('.badge.bg-success');
+        if (badgeSuccess) {
+            badgeSuccess.textContent = presentsCount + presentsTemporaires;
+        }
+    }
+    
+    console.log(`🔄 Élément temporaire mis à jour pour ${tempId}: ${statut}`);
+}
+
+// Vérifier s'il reste des post-it non résolus
+function verifierPostItRestants() {
+    let totalTemporaires = 0;
+    
+    for (const [classeId, temporaires] of Object.entries(apprenantsTemporaires)) {
+        totalTemporaires += Object.keys(temporaires).length;
+    }
+    
+    return totalTemporaires;
+}
+
+// Compter les présents temporaires pour une classe
+function compterPresentsTemporaires(classeId) {
+    if (!apprenantsTemporaires[classeId]) return 0;
+    
+    return Object.values(apprenantsTemporaires[classeId]).filter(app => 
+        app.statut_presence === 'present'
+    ).length;
+}
+
+</script>
+
+{% endblock %}

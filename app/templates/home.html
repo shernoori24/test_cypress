@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Accueil{% endblock %}
+{% block body %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="jumbotron">
+    <h1 class="display-4">Application de Gestion Scolaire</h1>
+    <p class="lead">Votre outil de gestion pour les inscriptions, présences et planning.</p>
+    <hr class="my-4">
+    <p>Choisissez une fonctionnalité ci-dessous pour commencer :</p>
+</div>
+    
+    <div class="row">
+        <!-- Nouvelle Inscription -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="fas fa-user-plus text-primary"></i> Nouvelle Inscription
+                    </h5>
+                    <p class="card-text flex-grow-1">
+                        Ajouter une nouvelle inscription d'apprenant dans le système.
+                    </p>
+                    <a href="{{ url_for('inscription.inserer_inscription') }}" class="btn btn-primary mt-auto">
+                        Ajouter inscription
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Voir Inscriptions -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="fas fa-list text-success"></i> Inscriptions
+                    </h5>
+                    <p class="card-text flex-grow-1">
+                        Consulter et gérer les inscriptions des apprenants.
+                    </p>
+                    <a href="{{ url_for('inscription.voir_inscriptions') }}" class="btn btn-success mt-auto">
+                        Voir la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Planning Hebdomadaire -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="fas fa-calendar-week text-info"></i> Planning Hebdomadaire
+                    </h5>
+                    <p class="card-text flex-grow-1">
+                        Consulter et gérer le planning des cours de la semaine.
+                    </p>
+                    <a href="{{ url_for('planning.index') }}" class="btn btn-info mt-auto">
+                        Voir le planning
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <!-- Pointage des Présences -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="fas fa-clipboard-check text-warning"></i> Pointage des Présences
+                    </h5>
+                    <p class="card-text flex-grow-1">
+                        Effectuer le pointage des présences des apprenants.
+                    </p>
+                    <a href="{{ url_for('planning.pointage') }}" class="btn btn-warning mt-auto">
+                        Faire le pointage
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rapports et Statistiques -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-bar text-secondary"></i> Activité Apprenant
+                    </h5>
+                    <p class="card-text flex-grow-1">
+                        Consulter le rapport d'activité détaillé des apprenants.
+                    </p>
+                    <a href="{{ url_for('report.rapport_activite_apprenant') }}" class="btn btn-secondary mt-auto">
+                        Voir le rapport
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+<style>
+    .jumbotron {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .card-title i {
+        margin-right: 8px;
+    }
+    
+    .btn {
+        border-radius: 20px;
+        padding: 8px 20px;
+    }
+</style>
+{% endblock %}

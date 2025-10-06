@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+{% block title %}Gestion des Encadrants{% endblock %}
+
+{% block body %}
+<style>
+.encadrant-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+}
+
+.encadrant-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.numero-badge {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.btn-action {
+    padding: 8px 12px;
+    margin: 2px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.btn-modifier {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-modifier:hover {
+    background-color: #e0a800;
+    transform: scale(1.05);
+}
+
+.btn-supprimer {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-supprimer:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
+.form-numero {
+    font-family: monospace;
+    font-size: 1.1rem;
+    text-align: center;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+}
+
+.form-numero:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Bouton flottant */
+.floating-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.floating-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+    background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+}
+
+.floating-btn:active {
+    transform: scale(0.95);
+}
+</style>
+
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-user-tie"></i> Gestion des Encadrants
+                    </h3>
+                    <small>Configuration des numéros d'encadrants pour le pointage</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Liste des encadrants - Pleine largeur -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-list"></i> Liste des Encadrants
+                        <span class="badge bg-primary ms-2" id="count-encadrants">0</span>
+                    </h6>
+                </div>
+                <div class="card-body" id="listeEncadrants">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-user-tie fa-3x mb-3"></i>
+                        <p>Aucun encadrant configuré</p>
+                        <small>Cliquez sur le bouton + pour ajouter des encadrants</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton flottant pour ajouter un encadrant -->
+<button class="floating-btn" onclick="ouvrirModalEncadrant()" title="Ajouter un encadrant">
+    <i class="fas fa-plus"></i>
+</button>
+
+<!-- Modal pour ajouter/modifier un encadrant -->
+<div class="modal fade" id="modalEncadrant" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-tie"></i> <span id="modal-title">Ajouter un Encadrant</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEncadrant">
+                    <div class="mb-3">
+                        <label for="nomEncadrant" class="form-label">Nom de l'Encadrant</label>
+                        <input type="text" class="form-control" id="nomEncadrant" required>
+                        <small class="text-muted">Nom complet tel qu'il apparaît dans les classes</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="numeroEncadrant" class="form-label">Numéro d'Encadrant</label>
+                        <input type="text" class="form-control form-numero" id="numeroEncadrant" 
+                               pattern="[0-9]{2}-[0-9]{3}" placeholder="XX-XXX" maxlength="6" required>
+                        <small class="text-muted">Format: XX-XXX (ex: 25-725)</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-success" onclick="sauvegarderEncadrant()">
+                    <i class="fas fa-save"></i> <span id="modal-btn-text">Ajouter</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="modalConfirmation" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer l'encadrant <strong id="nomSuppression"></strong> ?</p>
+                <p class="text-muted">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" onclick="confirmerSuppression()">
+                    <i class="fas fa-trash"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let encadrants = {};
+let encadrantEnModification = null;
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    chargerEncadrants();
+    
+    // Event listener pour le formulaire (soumission via Enter)
+    document.getElementById('formEncadrant').addEventListener('submit', function(e) {
+        e.preventDefault();
+        sauvegarderEncadrant();
+    });
+    
+    // Formatage automatique du numéro
+    document.getElementById('numeroEncadrant').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/[^0-9]/g, '');
+        if (value.length >= 3) {
+            value = value.slice(0, 2) + '-' + value.slice(2, 5);
+        }
+        e.target.value = value;
+    });
+    
+    // Event listener pour fermeture du modal (réinitialisation)
+    document.getElementById('modalEncadrant').addEventListener('hidden.bs.modal', function() {
+        annulerModification();
+    });
+});
+
+async function chargerEncadrants() {
+    try {
+        const response = await fetch('/planning/api/encadrants');
+        const result = await response.json();
+        
+        if (result.success) {
+            encadrants = result.encadrants;
+            afficherEncadrants();
+        } else {
+            console.error('Erreur:', result.error);
+            encadrants = {};
+            afficherEncadrants();
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        encadrants = {};
+        afficherEncadrants();
+    }
+}
+
+function afficherEncadrants() {
+    const container = document.getElementById('listeEncadrants');
+    const countElement = document.getElementById('count-encadrants');
+    
+    const nombreEncadrants = Object.keys(encadrants).length;
+    countElement.textContent = nombreEncadrants;
+    
+    if (nombreEncadrants === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-user-tie fa-3x mb-3"></i>
+                <p>Aucun encadrant configuré</p>
+                <small>Cliquez sur le bouton + pour ajouter des encadrants</small>
+            </div>
+        `;
+        return;
+    }
+    
+    // Trier les encadrants par nom
+    const encadrantsTries = Object.entries(encadrants).sort((a, b) => a[0].localeCompare(b[0]));
+    
+    // Créer la grille responsive
+    let html = '<div class="row">';
+    
+    encadrantsTries.forEach(([nom, numero]) => {
+        html += `
+            <div class="col-12 col-md-6 col-lg-4 mb-3">
+                <div class="encadrant-card p-3 h-100">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div class="mb-2">
+                            <h6 class="mb-1">
+                                <i class="fas fa-user"></i> ${nom}
+                            </h6>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="numero-badge">${numero}</span>
+                            <div>
+                                <button class="btn-action btn-modifier" onclick="modifierEncadrant('${nom}', '${numero}')" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-action btn-supprimer" onclick="demanderSuppression('${nom}')" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function sauvegarderEncadrant() {
+    try {
+        const nom = document.getElementById('nomEncadrant').value.trim();
+        const numero = document.getElementById('numeroEncadrant').value.trim();
+        
+        if (!nom || !numero) {
+            alert('Veuillez remplir tous les champs');
+            return;
+        }
+        
+        // Validation du format
+        if (!/^\d{2}-\d{3}$/.test(numero)) {
+            alert('Le numéro doit être au format XX-XXX (ex: 25-725)');
+            return;
+        }
+        
+        const response = await fetch('/planning/api/encadrant', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                nom_encadrant: nom,
+                numero_encadrant: numero
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            
+            // Fermer le modal
+            bootstrap.Modal.getInstance(document.getElementById('modalEncadrant')).hide();
+            
+            // Recharger la liste
+            chargerEncadrants();
+        } else {
+            alert('Erreur: ' + result.error);
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde');
+    }
+}
+
+// Ouvrir le modal pour ajouter un encadrant
+function ouvrirModalEncadrant() {
+    encadrantEnModification = null;
+    
+    // Réinitialiser le formulaire
+    document.getElementById('formEncadrant').reset();
+    
+    // Configurer pour l'ajout
+    document.getElementById('modal-title').textContent = 'Ajouter un Encadrant';
+    document.getElementById('modal-btn-text').textContent = 'Ajouter';
+    
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('modalEncadrant'));
+    modal.show();
+    
+    // Focus sur le premier champ
+    setTimeout(() => {
+        document.getElementById('nomEncadrant').focus();
+    }, 500);
+}
+
+function modifierEncadrant(nom, numero) {
+    encadrantEnModification = nom;
+    
+    // Remplir le formulaire
+    document.getElementById('nomEncadrant').value = nom;
+    document.getElementById('numeroEncadrant').value = numero;
+    
+    // Configurer pour la modification
+    document.getElementById('modal-title').textContent = 'Modifier l\'Encadrant';
+    document.getElementById('modal-btn-text').textContent = 'Modifier';
+    
+    // Ouvrir le modal
+    const modal = new bootstrap.Modal(document.getElementById('modalEncadrant'));
+    modal.show();
+    
+    // Focus sur le premier champ
+    setTimeout(() => {
+        document.getElementById('nomEncadrant').focus();
+    }, 500);
+}
+
+function annulerModification() {
+    encadrantEnModification = null;
+    
+    // Réinitialiser le formulaire
+    document.getElementById('formEncadrant').reset();
+    
+    // Remettre en mode ajout par défaut
+    document.getElementById('modal-title').textContent = 'Ajouter un Encadrant';
+    document.getElementById('modal-btn-text').textContent = 'Ajouter';
+}
+
+function demanderSuppression(nom) {
+    document.getElementById('nomSuppression').textContent = nom;
+    encadrantEnModification = nom;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmation'));
+    modal.show();
+}
+
+async function confirmerSuppression() {
+    try {
+        if (!encadrantEnModification) return;
+        
+        const response = await fetch(`/planning/api/encadrant/${encodeURIComponent(encadrantEnModification)}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            
+            // Fermer le modal
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmation')).hide();
+            
+            // Recharger la liste
+            chargerEncadrants();
+        } else {
+            alert('Erreur: ' + result.error);
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    }
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,1302 @@
+{% extends "base.html" %}
+{% block title %}Gestion des Classes{% endblock %}
+
+{% block body %}
+<style>
+/* Variables CSS pour la cohérence des couleurs */
+:root {
+    --primary-color: #007bff;
+    --primary-dark: #0056b3;
+    --success-color: #28a745;
+    --success-dark: #1e7e34;
+    --warning-color: #ffc107;
+    --warning-dark: #e0a800;
+    --info-color: #17a2b8;
+    --info-dark: #138496;
+    --danger-color: #dc3545;
+    --danger-dark: #c82333;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --transition: all 0.3s ease;
+}
+
+/* Styles pour les cartes de classes */
+.classe-card {
+    transition: var(--transition);
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.classe-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    border-color: var(--primary-color);
+}
+
+.classe-active {
+    border-color: var(--success-color);
+    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+}
+
+.classe-inactive {
+    border-color: var(--danger-color);
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+    opacity: 0.8;
+}
+
+.action-buttons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.classe-card:hover .action-buttons {
+    opacity: 1;
+}
+
+.recurrence-info {
+    background: linear-gradient(135deg, var(--info-color) 0%, var(--info-dark) 100%);
+    color: white;
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+.participant-badge {
+    display: inline-block;
+    margin: 2px;
+    font-size: 0.85rem;
+    border-radius: 15px;
+    padding: 4px 8px;
+}
+
+/* Bouton flottant */
+.floating-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+    background: linear-gradient(135deg, var(--success-color) 0%, var(--success-dark) 100%);
+    border: none;
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    transition: var(--transition);
+}
+
+.floating-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.6);
+    color: white;
+}
+
+/* Styles pour le tableau hebdomadaire */
+.planning-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+}
+
+.planning-table th {
+    background: linear-gradient(135deg, var(--dark-color) 0%, #495057 100%);
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: 600;
+    border: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.planning-table td {
+    padding: 12px;
+    border: 1px solid #e9ecef;
+    vertical-align: top;
+    min-height: 80px;
+    position: relative;
+    background: var(--light-color);
+    transition: var(--transition);
+}
+
+.planning-table .creneau-header {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    min-width: 120px;
+    border-right: 1px solid rgba(255,255,255,0.2);
+}
+
+.cellule-classe {
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 80px;
+    background: var(--light-color);
+    border-radius: 4px;
+}
+
+.cellule-classe:hover {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.2);
+}
+
+.cellule-classe.avec-classes {
+    background: linear-gradient(135deg, #ffffff 0%, #f1f8ff 100%);
+    border: 1px solid rgba(0,123,255,0.1);
+}
+
+.cellule-vide {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 25px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 4px;
+}
+
+/* Pastilles des classes */
+.classe-pastille {
+    display: inline-block;
+    margin: 3px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(10px);
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.classe-pastille:hover {
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+    border-color: rgba(255,255,255,0.9);
+}
+
+.pastille-details {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.95;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* Couleurs par matière */
+.classe-pastille.francais {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.classe-pastille.mathematiques {
+    background: linear-gradient(135deg, var(--info-color) 0%, var(--info-dark) 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(23, 162, 184, 0.3);
+}
+
+.classe-pastille.informatique {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+.classe-pastille.orientation {
+    background: linear-gradient(135deg, var(--warning-color) 0%, var(--warning-dark) 100%);
+    color: #333;
+    box-shadow: 0 2px 6px rgba(255, 193, 7, 0.3);
+}
+
+.classe-pastille.atelier-ecriture {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(155, 89, 182, 0.3);
+}
+
+.classe-pastille.formation-professionnelle {
+    background: linear-gradient(135deg, var(--success-color) 0%, var(--success-dark) 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+}
+
+.classe-pastille.autre {
+    background: linear-gradient(135deg, #6c757d 0%, var(--dark-color) 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3);
+}
+
+/* Indicateur nombre de classes */
+.nombre-classes {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+/* Styles pour modals */
+#modalClasse { z-index: 1060; }
+#modalNouvelEncadrant { z-index: 1065; }
+.modal-backdrop.show { opacity: 0.5; }
+.modal-header { border-bottom: 2px solid rgba(255,255,255,0.2); }
+.modal-footer { border-top: 1px solid #dee2e6; background: var(--light-color); }
+
+/* Formulaires améliorés */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Cartes statistiques avec hover */
+.card.text-center {
+    transition: var(--transition);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.card.text-center:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+/* Animation de chargement pour les apprenants */
+.loading-apprenants {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--primary-color);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+</style>
+
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h3 class="mb-0">
+                                <i class="fas fa-graduation-cap"></i> Gestion des Classes
+                            </h3>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex flex-column flex-md-row justify-content-md-end gap-2">
+                                <a href="{{ url_for('planning.gestion_encadrants') }}" class="btn btn-outline-light btn-lg">
+                                    <i class="fas fa-users-cog"></i> Gestion des Encadrants
+                                </a>
+                                <button class="btn btn-success btn-lg" onclick="ouvrirModalClasse()">
+                                    <i class="fas fa-plus"></i> Nouvelle Classe
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <i class="fas fa-chalkboard-teacher fa-2x text-primary mb-2"></i>
+                    <h4 class="text-primary" id="totalClasses">0</h4>
+                    <p class="card-text">Classes Créées</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <i class="fas fa-play fa-2x text-success mb-2"></i>
+                    <h4 class="text-success" id="classesActives">0</h4>
+                    <p class="card-text">Classes Actives</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x text-info mb-2"></i>
+                    <h4 class="text-info" id="totalApprenants">0</h4>
+                    <p class="card-text">Total Apprenants</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <i class="fas fa-calendar-week fa-2x text-warning mb-2"></i>
+                    <h4 class="text-warning" id="ateliersGeneres">0</h4>
+                    <p class="card-text">Ateliers/Semaine</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Planning hebdomadaire des classes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-calendar-week"></i> Planning Hebdomadaire des Classes
+                            <span class="badge bg-primary ms-2" id="classeCount">0</span>
+                        </h6>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light" onclick="basculerVueTableau()" id="btnBasculerVue">
+                                <i class="fas fa-th-large"></i> Vue Cartes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" id="conteneurPlanningClasses">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-chalkboard fa-3x mb-3"></i>
+                        <p>Aucune classe créée. Cliquez sur "Nouvelle Classe" pour commencer.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton flottant pour nouvelle classe -->
+<button class="floating-btn" onclick="ouvrirModalClasse()" title="Nouvelle classe">
+    <i class="fas fa-plus"></i>
+</button>
+
+<!-- Modal pour créer/modifier une classe -->
+<div class="modal fade" id="modalClasse" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-graduation-cap"></i> <span id="modalTitleClasse">Nouvelle Classe</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formClasse">
+                    <div class="row">
+                        <!-- Informations générales -->
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-info-circle"></i> Informations Générales
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="classeNom" class="form-label">
+                                    <i class="fas fa-tag"></i> Nom de la classe *
+                                </label>
+                                <input type="text" class="form-control" id="classeNom" name="nom" required 
+                                       placeholder="Ex: Français Débutant A1">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="classeActivite" class="form-label">
+                                    <i class="fas fa-tasks"></i> Activité *
+                                </label>
+                                <select class="form-select" id="classeActivite" name="activite" required>
+                                    <option value="">-- Choisir une activité --</option>
+                                    <option value="Français">Français</option>
+                                    <option value="Mathématiques">Mathématiques</option>
+                                    <option value="Informatique">Informatique</option>
+                                    <option value="Orientation">Orientation</option>
+                                    <option value="Atelier écriture">Atelier écriture</option>
+                                    <option value="Formation professionnelle">Formation professionnelle</option>
+                                    <option value="Orthophonie">Orthophonie</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="classeEncadrant" class="form-label">
+                                    <i class="fas fa-user-tie"></i> Encadrant *
+                                </label>
+                                <div class="input-group">
+                                    <select class="form-select" id="classeEncadrant" name="encadrant" required onchange="afficherNumeroEncadrant()">
+                                        <option value="">-- Sélectionner un encadrant --</option>
+                                        <!-- Options chargées dynamiquement -->
+                                    </select>
+                                    <button class="btn btn-outline-primary" type="button" onclick="ouvrirModalNouvelEncadrant()">
+                                        <i class="fas fa-plus"></i> Nouveau
+                                    </button>
+                                </div>
+                                <small class="text-muted" id="infoNumeroEncadrant" style="display: none;">
+                                    Numéro : <span class="badge bg-info" id="badgeNumeroEncadrant"></span>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Récurrence -->
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-calendar-alt"></i> Récurrence et Horaires
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-calendar-week"></i> Jours de la semaine *
+                                </label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="lundi" id="jour_lundi" name="jours">
+                                            <label class="form-check-label" for="jour_lundi">Lundi</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="mardi" id="jour_mardi" name="jours">
+                                            <label class="form-check-label" for="jour_mardi">Mardi</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="mercredi" id="jour_mercredi" name="jours">
+                                            <label class="form-check-label" for="jour_mercredi">Mercredi</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="jeudi" id="jour_jeudi" name="jours">
+                                            <label class="form-check-label" for="jour_jeudi">Jeudi</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="vendredi" id="jour_vendredi" name="jours">
+                                            <label class="form-check-label" for="jour_vendredi">Vendredi</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label for="classeHeureDebut" class="form-label">
+                                        <i class="fas fa-play"></i> Heure de début *
+                                    </label>
+                                    <input type="time" class="form-control" id="classeHeureDebut" name="heure_debut" required>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label for="classeHeureFin" class="form-label">
+                                        <i class="fas fa-stop"></i> Heure de fin *
+                                    </label>
+                                    <input type="time" class="form-control" id="classeHeureFin" name="heure_fin" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="classeActive" name="active" checked>
+                                    <label class="form-check-label" for="classeActive">
+                                        <i class="fas fa-power-off"></i> Classe active (génère automatiquement les ateliers)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section Apprenants Assignés -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-users"></i> Apprenants Assignés
+                                <span class="badge bg-primary ms-2" id="badgeNombreApprenants">0</span>
+                            </h6>
+                            
+                            <!-- Zone d'affichage des apprenants assignés -->
+                            <div id="listeApprenantsAssignesClasse" class="border rounded p-3" style="min-height: 120px; max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+                                <div class="text-center text-muted py-3">
+                                    <i class="fas fa-users fa-2x mb-2"></i>
+                                    <p class="mb-0">Aucun apprenant assigné à cette classe</p>
+                                    <small>Les apprenants sont assignés via la page de pointage</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Bouton pour accéder au pointage -->
+                            <div class="text-center mt-3">
+                                <a href="/planning/pointage" class="btn btn-outline-info btn-sm" target="_blank">
+                                    <i class="fas fa-external-link-alt"></i> Gérer les assignations dans le pointage
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-danger d-none" id="btnSupprimerClasse" onclick="supprimerClasse()">
+                    <i class="fas fa-trash"></i> Supprimer
+                </button>
+                <button type="button" class="btn btn-success" onclick="sauvegarderClasse()">
+                    <i class="fas fa-save"></i> Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de génération supprimée -->
+
+<!-- Modal pour ajouter un nouvel encadrant -->
+<div class="modal fade" id="modalNouvelEncadrant" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus"></i> Ajouter un Nouvel Encadrant
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNouvelEncadrant">
+                    <div class="mb-3">
+                        <label for="nouveauNomEncadrant" class="form-label">Nom de l'Encadrant *</label>
+                        <input type="text" class="form-control" id="nouveauNomEncadrant" required>
+                        <small class="text-muted">Nom complet tel qu'il apparaîtra dans les classes</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nouveauNumeroEncadrant" class="form-label">Numéro d'Encadrant *</label>
+                        <input type="text" class="form-control" id="nouveauNumeroEncadrant" 
+                               pattern="[0-9]{2}-[0-9]{3}" placeholder="XX-XXX" maxlength="6" required>
+                        <small class="text-muted">Format : XX-XXX (ex: 25-725)</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="ajouterNouvelEncadrant()">
+                    <i class="fas fa-save"></i> Ajouter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let classes = [];
+let classeEnEdition = null;
+let encadrants = {};
+let vueTableau = true; // Par défaut en vue tableau
+
+// Liste des apprenants (à charger depuis le backend)
+const apprenants = [
+    {% for apprenant in apprenants %}
+    {
+        numero: "{{ apprenant.numero }}",
+        nom_complet: "{{ apprenant.nom_complet }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    chargerClasses();
+    chargerEncadrants();
+});
+
+async function chargerClasses() {
+    try {
+        const response = await fetch('/planning/api/classes');
+        const data = await response.json();
+        
+        if (data.success) {
+            classes = data.classes;
+            afficherPlanningClasses();
+            mettreAJourStatistiques();
+        } else {
+            console.error('Erreur lors du chargement des classes:', data.error);
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        classes = [];
+        afficherPlanningClasses();
+    }
+}
+
+// Fonction principale pour afficher le planning des classes
+function afficherPlanningClasses() {
+    if (vueTableau) {
+        afficherTableauHebdomadaire();
+    } else {
+        afficherClassesCartes();
+    }
+}
+
+// Bascule entre vue tableau et vue cartes
+function basculerVueTableau() {
+    vueTableau = !vueTableau;
+    const btn = document.getElementById('btnBasculerVue');
+    
+    if (vueTableau) {
+        btn.innerHTML = '<i class="fas fa-th-large"></i> Vue Cartes';
+        document.querySelector('.card-header h6 i').className = 'fas fa-calendar-week';
+        document.querySelector('.card-header h6').childNodes[1].textContent = ' Planning Hebdomadaire des Classes';
+    } else {
+        btn.innerHTML = '<i class="fas fa-table"></i> Vue Tableau';
+        document.querySelector('.card-header h6 i').className = 'fas fa-list';
+        document.querySelector('.card-header h6').childNodes[1].textContent = ' Classes Configurées';
+    }
+    
+    afficherPlanningClasses();
+}
+
+// Nouvelle fonction pour afficher le tableau hebdomadaire
+function afficherTableauHebdomadaire() {
+    const container = document.getElementById('conteneurPlanningClasses');
+    const countElement = document.getElementById('classeCount');
+    
+    countElement.textContent = classes.length.toString();
+    
+    if (classes.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-chalkboard fa-3x mb-3"></i>
+                <p>Aucune classe créée. Cliquez sur "Nouvelle Classe" pour commencer.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Générer les créneaux horaires uniques
+    const creneaux = genererCreneauxHoraires();
+    const jours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+    const joursLabels = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+    
+    let html = `
+        <table class="planning-table table table-bordered mb-0">
+            <thead>
+                <tr>
+                    <th class="creneau-header">Créneaux</th>
+                    ${joursLabels.map(jour => `<th>${jour}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    creneaux.forEach(creneau => {
+        html += `<tr>`;
+        html += `<td class="creneau-header">${creneau}</td>`;
+        
+        jours.forEach(jour => {
+            const classesCreneauJour = obtenirClassesPourCreneauEtJour(creneau, jour);
+            html += genererCelluleTableau(classesCreneauJour, creneau, jour);
+        });
+        
+        html += `</tr>`;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Générer les créneaux horaires uniques à partir des classes
+function genererCreneauxHoraires() {
+    const creneaux = new Set();
+    
+    classes.forEach(classe => {
+        const creneau = `${classe.heure_debut} - ${classe.heure_fin}`;
+        creneaux.add(creneau);
+    });
+    
+    // Trier les créneaux par heure de début
+    return Array.from(creneaux).sort((a, b) => {
+        const heureA = a.split(' - ')[0];
+        const heureB = b.split(' - ')[0];
+        return heureA.localeCompare(heureB);
+    });
+}
+
+// Obtenir les classes pour un créneau et un jour donnés
+function obtenirClassesPourCreneauEtJour(creneau, jour) {
+    return classes.filter(classe => {
+        const creneauClasse = `${classe.heure_debut} - ${classe.heure_fin}`;
+        return creneauClasse === creneau && classe.jours.includes(jour);
+    });
+}
+
+// Générer une cellule du tableau
+function genererCelluleTableau(classesCell, creneau, jour) {
+    if (classesCell.length === 0) {
+        return `<td class="cellule-classe cellule-vide">-</td>`;
+    }
+    
+    const nombreClasses = classesCell.length;
+    let html = `<td class="cellule-classe avec-classes">`;
+    
+    if (nombreClasses > 1) {
+        html += `<div class="nombre-classes">${nombreClasses}</div>`;
+    }
+    
+    classesCell.forEach(classe => {
+        const nbApprenants = classe.apprenants ? classe.apprenants.length : 0;
+        const activiteClass = classe.activite.toLowerCase().replace(/\s+/g, '-').replace(/[éèê]/g, 'e');
+        const statusIcon = classe.active ? '●' : '○';
+        
+        html += `
+            <div class="classe-pastille ${activiteClass}" onclick="modifierClasse(${classe.id})" title="Cliquer pour modifier ${classe.nom}">
+                <div>${statusIcon} ${classe.nom}</div>
+                <div class="pastille-details">
+                    👨‍🏫 ${classe.encadrant} | 👥 ${nbApprenants}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</td>`;
+    return html;
+}
+
+// Fonction originale pour l'affichage en cartes (garde la logique existante)
+function afficherClassesCartes() {
+    const container = document.getElementById('conteneurPlanningClasses');
+    const countElement = document.getElementById('classeCount');
+    
+    countElement.textContent = classes.length.toString();
+    
+    if (classes.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-chalkboard fa-3x mb-3"></i>
+                <p>Aucune classe créée. Cliquez sur "Nouvelle Classe" pour commencer.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row p-3">';
+    
+    classes.forEach(classe => {
+        const nbApprenants = classe.apprenants ? classe.apprenants.length : 0;
+        const classeCSS = classe.active ? 'classe-active' : 'classe-inactive';
+        const statusIcon = classe.active ? 'fas fa-play text-success' : 'fas fa-pause text-danger';
+        
+        html += `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card classe-card ${classeCSS}" data-classe-id="${classe.id}">
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="modifierClasse(${classe.id})" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger ms-1" onclick="confirmerSuppressionClasse(${classe.id})" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="card-header">
+                        <h6 class="card-title mb-1">
+                            <i class="${statusIcon}"></i> ${classe.nom}
+                        </h6>
+                        <small class="text-muted">${classe.activite}</small>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="recurrence-info">
+                            <i class="fas fa-calendar-alt"></i> ${classe.jours.join(', ')}
+                            <br><i class="fas fa-clock"></i> ${classe.heure_debut} - ${classe.heure_fin}
+                        </div>
+                        
+                        <p class="card-text">
+                            <i class="fas fa-user-tie"></i> <strong>Encadrant :</strong> ${classe.encadrant}<br>
+                            <i class="fas fa-users"></i> <strong>Apprenants :</strong> ${nbApprenants} assigné(s)
+                        </p>
+                        
+                        <div class="mt-3">
+                            ${classe.apprenants.slice(0, 3).map(numero => {
+                                const apprenant = apprenants.find(a => a.numero === numero);
+                                return `<span class="badge bg-secondary participant-badge">${apprenant ? apprenant.nom_complet : numero}</span>`;
+                            }).join('')}
+                            ${classe.apprenants.length > 3 ? `<span class="badge bg-info participant-badge">+${classe.apprenants.length - 3} autres</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function mettreAJourStatistiques() {
+    const totalClasses = classes.length;
+    const classesActives = classes.filter(c => c.active).length;
+    const totalApprenants = new Set(classes.flatMap(c => c.apprenants)).size;
+    const ateliersGeneres = classes.reduce((total, classe) => total + classe.jours.length, 0);
+    
+    document.getElementById('totalClasses').textContent = totalClasses;
+    document.getElementById('classesActives').textContent = classesActives;
+    document.getElementById('totalApprenants').textContent = totalApprenants;
+    document.getElementById('ateliersGeneres').textContent = ateliersGeneres;
+}
+
+function ouvrirModalClasse(classeId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('modalClasse'));
+    
+    // Réinitialiser le formulaire
+    document.getElementById('formClasse').reset();
+    document.querySelectorAll('input[name="jours"]').forEach(cb => cb.checked = false);
+    
+    // Réinitialiser l'affichage des apprenants
+    reinitialiserAffichageApprenants();
+    
+    if (classeId) {
+        // Mode édition
+        classeEnEdition = classes.find(c => c.id === classeId);
+        if (classeEnEdition) {
+            chargerClasseDansFormulaire(classeEnEdition);
+            document.getElementById('modalTitleClasse').textContent = 'Modifier la Classe';
+            document.getElementById('btnSupprimerClasse').classList.remove('d-none');
+        }
+    } else {
+        // Mode création
+        classeEnEdition = null;
+        document.getElementById('modalTitleClasse').textContent = 'Nouvelle Classe';
+        document.getElementById('btnSupprimerClasse').classList.add('d-none');
+    }
+    
+    modal.show();
+}
+
+async function chargerApprenantsAssignes(classeId) {
+    if (!classeId) {
+        reinitialiserAffichageApprenants();
+        return;
+    }
+    
+    // Afficher l'animation de chargement
+    afficherChargementApprenants();
+    
+    try {
+        const response = await fetch(`/planning/api/classe/${classeId}/apprenants`);
+        const result = await response.json();
+        
+        if (result.success) {
+            afficherApprenantsAssignes(result.apprenants, result.nombre_apprenants);
+        } else {
+            console.error('Erreur lors du chargement des apprenants:', result.error);
+            reinitialiserAffichageApprenants();
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        reinitialiserAffichageApprenants();
+    }
+}
+
+function afficherChargementApprenants() {
+    const container = document.getElementById('listeApprenantsAssignesClasse');
+    const badge = document.getElementById('badgeNombreApprenants');
+    
+    // Mettre à jour le badge pour indiquer le chargement
+    badge.textContent = '...';
+    
+    // Afficher l'animation de chargement
+    container.innerHTML = `
+        <div class="loading-apprenants">
+            <div class="loading-spinner"></div>
+            <p class="mb-0 fw-bold">Chargement des apprenants assignés</p>
+        </div>
+    `;
+}
+
+function afficherApprenantsAssignes(apprenants, nombreTotal) {
+    const container = document.getElementById('listeApprenantsAssignesClasse');
+    const badge = document.getElementById('badgeNombreApprenants');
+    
+    // Mettre à jour le badge du nombre
+    badge.textContent = nombreTotal.toString();
+    
+    if (apprenants.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <p class="mb-0">Aucun apprenant assigné à cette classe</p>
+                <small>Les apprenants sont assignés via la page de pointage</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row">';
+    apprenants.forEach(apprenant => {
+        // Générer la balise img avec fallback jpg/jpeg/default
+        const numero = apprenant.numero;
+        const nom = apprenant.nom_complet;
+        const photoUrl = `/photos_profils_apprenants/${numero}.jpg`;
+        const photoUrlJpeg = `/photos_profils_apprenants/${numero}.jpeg`;
+        const defaultUrl = '/photos_profils_apprenants/default.jpg';
+        html += `
+            <div class="col-md-6 mb-2">
+                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
+                    <div class="d-flex align-items-center">
+                        <img src="${photoUrl}" alt="Photo ${numero}" class="rounded-circle me-2" style="width:36px;height:36px;object-fit:cover;border:1.5px solid #dee2e6;"
+                            onerror="this.onerror=null;this.src='${photoUrlJpeg}';this.onerror=function(){this.src='${defaultUrl}';}">
+                        <div>
+                            <strong class="text-primary">${numero}</strong>
+                            <span class="ms-2">${nom}</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-success">
+                        <i class="fas fa-check"></i> Assigné
+                    </span>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function reinitialiserAffichageApprenants() {
+    const container = document.getElementById('listeApprenantsAssignesClasse');
+    const badge = document.getElementById('badgeNombreApprenants');
+    
+    badge.textContent = '0';
+    container.innerHTML = `
+        <div class="text-center text-muted py-3">
+            <i class="fas fa-users fa-2x mb-2"></i>
+            <p class="mb-0">Aucun apprenant assigné à cette classe</p>
+            <small>Les apprenants sont assignés via la page de pointage</small>
+        </div>
+    `;
+}
+
+function chargerClasseDansFormulaire(classe) {
+    document.getElementById('classeNom').value = classe.nom;
+    document.getElementById('classeActivite').value = classe.activite;
+    document.getElementById('classeEncadrant').value = classe.encadrant;
+    document.getElementById('classeHeureDebut').value = classe.heure_debut;
+    document.getElementById('classeHeureFin').value = classe.heure_fin;
+    document.getElementById('classeActive').checked = classe.active;
+    
+    // Cocher les jours
+    classe.jours.forEach(jour => {
+        const checkbox = document.getElementById(`jour_${jour}`);
+        if (checkbox) checkbox.checked = true;
+    });
+    
+    // Charger les apprenants assignés
+    chargerApprenantsAssignes(classe.id);
+}
+
+async function sauvegarderClasse() {
+    try {
+        const formData = new FormData(document.getElementById('formClasse'));
+        
+        // Récupérer les jours sélectionnés
+        const joursSelectionnes = Array.from(document.querySelectorAll('input[name="jours"]:checked'))
+            .map(cb => cb.value);
+        
+        // Récupérer les apprenants sélectionnés
+        const apprenantsSelectionnes = Array.from(document.querySelectorAll('input[name="apprenants_classe"]:checked'))
+            .map(cb => cb.value);
+        
+        const classe = {
+            nom: formData.get('nom'),
+            activite: formData.get('activite'),
+            encadrant: formData.get('encadrant'),
+            jours: joursSelectionnes,
+            heure_debut: formData.get('heure_debut'),
+            heure_fin: formData.get('heure_fin'),
+            active: document.getElementById('classeActive').checked
+        };
+        
+        // Si on est en mode modification et qu'aucun apprenant n'est sélectionné via le formulaire,
+        // on ne définit pas le champ apprenants pour que le backend préserve ceux existants
+        if (apprenantsSelectionnes.length > 0) {
+            classe.apprenants = apprenantsSelectionnes;
+        }
+        
+        // Ajouter l'ID seulement si on modifie une classe existante
+        if (classeEnEdition && classeEnEdition.id) {
+            classe.id = classeEnEdition.id;
+        }
+        
+        // Debug: afficher l'ID et le mode
+        console.log('Mode:', classeEnEdition ? 'Modification' : 'Création');
+        console.log('ID de la classe:', classe.id, typeof classe.id);
+        console.log('Apprenants dans les données:', classe.apprenants);
+        
+        // Validation
+        if (!classe.nom || !classe.activite || !classe.encadrant || !classe.heure_debut || !classe.heure_fin) {
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return;
+        }
+        
+        if (joursSelectionnes.length === 0) {
+            alert('Veuillez sélectionner au moins un jour de la semaine.');
+            return;
+        }
+        
+        // Sauvegarder via API
+        const response = await fetch('/planning/api/classe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(classe)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Rafraîchir la liste
+            await chargerClasses();
+            
+            // Si on était en mode édition, recharger les apprenants assignés
+            if (classeEnEdition && classeEnEdition.id) {
+                await chargerApprenantsAssignes(classeEnEdition.id);
+            }
+            
+            // Fermer le modal
+            bootstrap.Modal.getInstance(document.getElementById('modalClasse')).hide();
+            
+            // Classe sauvegardée silencieusement
+        } else {
+            alert('Erreur lors de la sauvegarde : ' + result.error);
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde de la classe');
+    }
+}
+
+function modifierClasse(classeId) {
+    ouvrirModalClasse(classeId);
+}
+
+function confirmerSuppressionClasse(classeId) {
+    const classe = classes.find(c => c.id === classeId);
+    if (classe && confirm(`Êtes-vous sûr de vouloir supprimer la classe "${classe.nom}" ?`)) {
+        supprimerClasse(classeId);
+    }
+}
+
+async function supprimerClasse(classeId = null) {
+    try {
+        const id = classeId || (classeEnEdition ? classeEnEdition.id : null);
+        if (!id) return;
+        
+        const response = await fetch(`/planning/api/classe/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            await chargerClasses();
+            
+            if (!classeId) {
+                // Fermer le modal si appelé depuis le modal
+                bootstrap.Modal.getInstance(document.getElementById('modalClasse')).hide();
+            }
+            
+            alert('Classe supprimée avec succès !');
+        } else {
+            alert('Erreur lors de la suppression : ' + result.error);
+        }
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression de la classe');
+    }
+}
+
+// Fonctions de génération supprimées
+
+function showNotification(message, type = 'info') {
+    // Créer une notification temporaire
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Supprimer automatiquement après 3 secondes
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Fonctions pour gérer les encadrants
+async function chargerEncadrants() {
+    try {
+        console.log('Chargement des encadrants...');
+        const response = await fetch('/planning/api/encadrants');
+        const result = await response.json();
+        
+        console.log('Réponse API encadrants:', result);
+        
+        if (result.success) {
+            encadrants = result.encadrants;
+            console.log('Encadrants chargés:', encadrants);
+            populerDropdownEncadrants();
+        } else {
+            console.error('Erreur:', result.error);
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des encadrants:', error);
+    }
+}
+
+function populerDropdownEncadrants() {
+    console.log('Population du dropdown avec:', encadrants);
+    const select = document.getElementById('classeEncadrant');
+    
+    if (!select) {
+        console.error('Element select encadrant non trouvé!');
+        return;
+    }
+    
+    select.innerHTML = '<option value="">-- Sélectionner un encadrant --</option>';
+    
+    for (const [nom, numero] of Object.entries(encadrants)) {
+        console.log('Ajout encadrant:', nom, numero);
+        const option = document.createElement('option');
+        option.value = nom;
+        option.textContent = nom;
+        select.appendChild(option);
+    }
+    
+    console.log('Dropdown peuplé avec', Object.keys(encadrants).length, 'encadrants');
+}
+
+function afficherNumeroEncadrant() {
+    const select = document.getElementById('classeEncadrant');
+    const infoDiv = document.getElementById('infoNumeroEncadrant');
+    const badgeSpan = document.getElementById('badgeNumeroEncadrant');
+    const nomEncadrant = select.value;
+    
+    if (nomEncadrant && encadrants[nomEncadrant]) {
+        badgeSpan.textContent = encadrants[nomEncadrant];
+        infoDiv.style.display = 'block';
+    } else {
+        infoDiv.style.display = 'none';
+    }
+}
+
+function ouvrirModalNouvelEncadrant() {
+    const modal = new bootstrap.Modal(document.getElementById('modalNouvelEncadrant'));
+    modal.show();
+}
+
+async function ajouterNouvelEncadrant() {
+    const nom = document.getElementById('nouveauNomEncadrant').value.trim();
+    const numero = document.getElementById('nouveauNumeroEncadrant').value.trim();
+    
+    if (!nom || !numero) {
+        alert('Veuillez remplir tous les champs');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/planning/api/encadrant', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                nom_encadrant: nom, 
+                numero_encadrant: numero 
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            await chargerEncadrants();
+            
+            // Sélectionner le nouvel encadrant
+            document.getElementById('classeEncadrant').value = nom;
+            afficherNumeroEncadrant();
+            
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNouvelEncadrant'));
+            modal.hide();
+            
+            // Réinitialiser le formulaire
+            document.getElementById('nouveauNomEncadrant').value = '';
+            document.getElementById('nouveauNumeroEncadrant').value = '';
+            
+            showNotification('Encadrant ajouté avec succès', 'success');
+        } else {
+            alert('Erreur: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'ajout de l\'encadrant');
+    }
+}
+
+// Cacher les résultats si on clique ailleurs
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('#recherche_apprenant') && !event.target.closest('#resultats_recherche')) {
+        if (resultatsDiv) {
+            resultatsDiv.style.display = 'none';
+        }
+    }
+});
+</script>
+
+{% endblock %}

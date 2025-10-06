@@ -1,0 +1,122 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/*.log
+*.log
+
+# Data files (keep structure but not content)
+data/*.xlsx
+data/*.json
+data_use_fait/
+# tous les images dans data
+data/**/*.png
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.gif
+
+# Exports
+exports/*.xlsx
+exports/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# log et pyc
+*.log
+*.pyc
+__pycache__/
+
+# Config (if contains sensitive data)
+# config.py
+
+# === AJOUTS POUR PYINSTALLER ET RELEASES ===
+
+# PyInstaller builds
+build/
+dist/
+*.exe
+
+# Release et versions
+release/
+versions/
+*.zip
+
+# Fichiers temporaires de build
+temp_update/
+backup_*/
+
+# Fichiers de configuration réseau (peuvent contenir des IPs)
+network_config.json
+
+
+
+# Documentation générée
+GUIDE_MISE_A_JOUR.md
+GUIDE_RESEAU.md
+
+# Fichiers de version
+version.json
+app/version.py
+
+# Logs de PyInstaller
+warn-*.txt
+xref-*.html
+
+# Fichiers de cache et temporaires
+.cache/
+*.tmp
+*.temp
+
+# Sauvegarde des données utilisateur
+backup_*/
+*.backup
+
+
+
+# Certificats et clés (si ajoutés plus tard)
+*.pem
+*.key
+*.crt
+
+# Fichiers de test
+test_*.py
+*_test.py
+
+
+
+node_modules/
+data/
+logs/

@@ -1,0 +1,441 @@
+<!-- app/templates/inscription/inserer_une_inscription.html -->
+{% extends "base.html" %}
+{% block title %}Insérer une Inscription{% endblock %}
+{% block body %}
+<!-- Barre de progression -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="progress" style="height: 8px;">
+            <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-bar"></div>
+        </div>
+        <small class="text-muted">Progression du formulaire</small>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <h2>Ajouter une nouvelle inscription</h2>
+        <form method="POST" action="{{ url_for('inscription.inserer_inscription') }}">
+            <!-- Champs cachés pour préserver les paramètres de retour -->
+            <input type="hidden" name="retour" value="{{ request.args.get('retour', '') }}">
+            <input type="hidden" name="classe_id" value="{{ request.args.get('classe_id', '') }}">
+            <input type="hidden" name="temp_id" value="{{ request.args.get('temp_id', '') }}">
+            
+            <!-- Informations personnelles -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Informations personnelles</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="numero_apprenant" class="form-label">N° * :</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="numero_apprenant" name="numero_apprenant" required placeholder="Génération automatique..." value="{{ form_data.numero_apprenant if form_data else '' }}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btn-regenerer-numero" title="Régénérer le numéro">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">🤖 Généré automatiquement, modifiable</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="nom" class="form-label">Nom * :</label>
+                                <input type="text" class="form-control" id="nom" name="nom" required value="{{ form_data.nom if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="prenom" class="form-label">Prénom * :</label>
+                                <input type="text" class="form-control" id="prenom" name="prenom" required value="{{ form_data.prenom if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="sexe" class="form-label">Sexe :</label>
+                                <select class="form-control" id="sexe" name="sexe">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="M" {{ 'selected' if form_data and form_data.sexe == 'M' else '' }}>Masculin</option>
+                                    <option value="F" {{ 'selected' if form_data and form_data.sexe == 'F' else '' }}>Féminin</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="date_naissance" class="form-label">Date de naissance :</label>
+                                <input type="date" class="form-control" id="date_naissance" name="date_naissance" value="{{ form_data.date_naissance if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="pays_naissance" class="form-label">Pays de naissance :</label>
+                                <input type="text" class="form-control" id="pays_naissance" name="pays_naissance" value="{{ form_data.pays_naissance if form_data else '' }}" 
+                                       list="pays-list" autocomplete="country" placeholder="Tapez pour rechercher...">
+                                <datalist id="pays-list">
+                                    <!-- Liste des pays sera remplie par JavaScript -->
+                                </datalist>
+                                <small class="text-muted">💡 Tapez 2 lettres pour voir les suggestions</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="nationalite" class="form-label">Nationalité :</label>
+                                <input type="text" class="form-control auto-filled" id="nationalite" name="nationalite" value="{{ form_data.nationalite if form_data else '' }}" placeholder="F ou E">
+                                <small class="text-muted">🤖 F = France, E = Étranger</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="continent" class="form-label">Continent :</label>
+                                <select class="form-control auto-filled" id="continent" name="continent">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Europe">Europe</option>
+                                    <option value="Afrique">Afrique</option>
+                                    <option value="Asie">Asie</option>
+                                    <option value="Amérique du Nord">Amérique du Nord</option>
+                                    <option value="Amérique du Sud">Amérique du Sud</option>
+                                    <option value="Océanie">Océanie</option>
+                                </select>
+                                <small class="text-muted">🤖 Rempli automatiquement, modifiable</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="iso" class="form-label">Code ISO :</label>
+                                <input type="text" class="form-control auto-filled" id="iso" name="iso" placeholder="Ex: FRA, AFG" value="{{ form_data.iso if form_data else '' }}" maxlength="3" style="text-transform: uppercase;">
+                                <small class="text-muted">🤖 Code automatique, modifiable</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="arrivee_france" class="form-label">Arrivée en France :</label>
+                                <input type="date" class="form-control" id="arrivee_france" name="arrivee_france" value="{{ form_data.arrivee_france if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="langues_parlees" class="form-label">Langues parlées :</label>
+                                <input type="text" class="form-control" id="langues_parlees" name="langues_parlees" placeholder="Tapez pour rechercher et sélectionner vos langues..." value="{{ form_data.langues_parlees if form_data else '' }}">
+                                <small class="text-muted">💡 Tapez 2 lettres pour voir les suggestions, cliquez pour sélectionner</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statut administratif -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Statut administratif</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="document" class="form-label">Document :</label>
+                                <select class="form-control" id="document" name="document">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Passeport">Passeport</option>
+                                    <option value="CNI">Carte d'identité</option>
+                                    <option value="Titre de séjour">Titre de séjour</option>
+                                    <option value="Récépissé">Récépissé</option>
+                                    <option value="Attestation demande asile">Attestation demande d'asile</option>
+                                    <option value="Autorisation provisoire séjour">Autorisation provisoire de séjour</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="statut_entree" class="form-label">Statut à l'entrée :</label>
+                                <input type="text" class="form-control" id="statut_entree" name="statut_entree">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="statut_actuel" class="form-label">Statut actuel :</label>
+                                <input type="text" class="form-control" id="statut_actuel" name="statut_actuel">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="prioritaire_veille" class="form-label">Prioritaire/Veille :</label>
+                                <select class="form-control" id="prioritaire_veille" name="prioritaire_veille">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="P">Prioritaire</option>
+                                    <option value="NP">Non Prioritaire</option>
+                                    <option value="V">Veille</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coordonnées -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Coordonnées</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="adresse" class="form-label">Adresse * :</label>
+                                <input type="text" class="form-control" id="adresse" name="adresse" required value="{{ form_data.adresse if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="code_postal" class="form-label">Code postal * :</label>
+                                <input type="text" class="form-control" id="code_postal" name="code_postal" required value="{{ form_data.code_postal if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="ville" class="form-label">Ville * :</label>
+                                <input type="text" class="form-control" id="ville" name="ville" required value="{{ form_data.ville if form_data else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="telephone" class="form-label">Téléphone :</label>
+                                <input type="tel" class="form-control" id="telephone" name="telephone" placeholder="Ex: 06 12 34 56 78" value="{{ form_data.telephone if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email :</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ form_data.email if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="type_logement" class="form-label">Type de logement :</label>
+                                <select class="form-control" id="type_logement" name="type_logement">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Appartement" {% if form_data and form_data.type_logement == "Appartement" %}selected{% endif %}>Appartement</option>
+                                    <option value="Parents" {% if form_data and form_data.type_logement == "Parents" %}selected{% endif %}>Parents</option>
+                                    <option value="Foyer" {% if form_data and form_data.type_logement == "Foyer" %}selected{% endif %}>Foyer</option>
+                                    <option value="Personnel" {% if form_data and form_data.type_logement == "Personnel" %}selected{% endif %}>Personnel</option>
+                                    <option value="Foyer d'hébergement" {% if form_data and form_data.type_logement == "Foyer d'hébergement" %}selected{% endif %}>Foyer d'hébergement</option>
+                                    <option value="Famille d'accueil" {% if form_data and form_data.type_logement == "Famille d'accueil" %}selected{% endif %}>Famille d'accueil</option>
+                                    <option value="CADA" {% if form_data and form_data.type_logement == "CADA" %}selected{% endif %}>CADA</option>
+                                    <option value="Caravane" {% if form_data and form_data.type_logement == "Caravane" %}selected{% endif %}>Caravane</option>
+                                    <option value="Beaux parents" {% if form_data and form_data.type_logement == "Beaux parents" %}selected{% endif %}>Beaux parents</option>
+                                    <option value="Grand-mère" {% if form_data and form_data.type_logement == "Grand-mère" %}selected{% endif %}>Grand-mère</option>
+                                    <option value="Chez M. GODONIER" {% if form_data and form_data.type_logement == "Chez M. GODONIER" %}selected{% endif %}>Chez M. GODONIER</option>
+                                    <option value="115" {% if form_data and form_data.type_logement == "115" %}selected{% endif %}>115</option>
+                                    <option value="Hôtel" {% if form_data and form_data.type_logement == "Hôtel" %}selected{% endif %}>Hôtel</option>
+                                    <option value="FDE" {% if form_data and form_data.type_logement == "FDE" %}selected{% endif %}>FDE</option>
+                                    <option value="Famille" {% if form_data and form_data.type_logement == "Famille" %}selected{% endif %}>Famille</option>
+                                    <option value="Ami" {% if form_data and form_data.type_logement == "Ami" %}selected{% endif %}>Ami</option>
+                                    <option value="Sœur" {% if form_data and form_data.type_logement == "Sœur" %}selected{% endif %}>Sœur</option>
+                                    <option value="Parent (son papa)" {% if form_data and form_data.type_logement == "Parent (son papa)" %}selected{% endif %}>Parent (son papa)</option>
+                                    <option value="Hébergement" {% if form_data and form_data.type_logement == "Hébergement" %}selected{% endif %}>Hébergement</option>
+                                    <option value="Autre" {% if form_data and form_data.type_logement == "Autre" %}selected{% endif %}>Autre</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Situation personnelle et sociale -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Situation personnelle et sociale</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="situation_familiale" class="form-label">Situation familiale :</label>
+                                <select class="form-control" id="situation_familiale" name="situation_familiale">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="s" {% if form_data and form_data.situation_familiale == "s" %}selected{% endif %}>s - Seul</option>
+                                    <option value="co" {% if form_data and form_data.situation_familiale == "co" %}selected{% endif %}>co - Couple</option>
+                                    <option value="coe" {% if form_data and form_data.situation_familiale == "coe" %}selected{% endif %}>coe - Couple avec enfant</option>
+                                    <option value="se" {% if form_data and form_data.situation_familiale == "se" %}selected{% endif %}>se - Seul avec enfant</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="revenus" class="form-label">Revenus :</label>
+                                <select class="form-control" id="revenus" name="revenus">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="ADA" {% if form_data and form_data.revenus == "ADA" %}selected{% endif %}>ADA (Allocation aux Demandeurs d'Asile)</option>
+                                    <option value="Aucun" {% if form_data and form_data.revenus == "Aucun" %}selected{% endif %}>Aucun</option>
+                                    <option value="RSA" {% if form_data and form_data.revenus == "RSA" %}selected{% endif %}>RSA</option>
+                                    <option value="AAH" {% if form_data and form_data.revenus == "AAH" %}selected{% endif %}>AAH</option>
+                                    <option value="Pole emploi" {% if form_data and form_data.revenus == "Pole emploi" %}selected{% endif %}>Pôle emploi</option>
+                                    <option value="Salaire" {% if form_data and form_data.revenus == "Salaire" %}selected{% endif %}>Salaire</option>
+                                    <option value="Pension" {% if form_data and form_data.revenus == "Pension" %}selected{% endif %}>Pension</option>
+                                    <option value="Autre" {% if form_data and form_data.revenus == "Autre" %}selected{% endif %}>Autre</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="prescripteur" class="form-label">Prescripteur :</label>
+                                <input type="text" class="form-control" id="prescripteur" name="prescripteur" placeholder="Ex: CAF, Mission locale, CCAS" value="{{ form_data.prescripteur if form_data else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="structure_actuelle" class="form-label">Structure actuelle :</label>
+                                <input type="text" class="form-control" id="structure_actuelle" name="structure_actuelle" value="{{ form_data.structure_actuelle if form_data else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="date_inscription" class="form-label">Date inscription :</label>
+                                <input type="date" class="form-control" id="date_inscription" name="date_inscription" value="{{ form_data.date_inscription if form_data else today }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="premiere_venue" class="form-label">Première venue :</label>
+                                <input type="date" class="form-control" id="premiere_venue" name="premiere_venue" value="{{ form_data.premiere_venue if form_data else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="commentaires" class="form-label">Commentaires :</label>
+                                <textarea class="form-control" id="commentaires" name="commentaires" rows="3" placeholder="Informations complémentaires...">{{ form_data.commentaires if form_data else '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-success btn-lg">Ajouter l'inscription</button>
+                <a href="{{ url_for('home.home') }}" class="btn btn-secondary btn-lg ml-2">Annuler</a>
+            </div>
+        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} mt-3" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+</div>
+
+<!-- JavaScript pour l'auto-génération du numéro d'inscription -->
+<script>
+    /**
+     * 🤖 Auto-génération du numéro d'inscription
+     * 
+     * Cette fonction charge automatiquement le prochain numéro d'inscription
+     * disponible au chargement de la page, tout en gardant le champ modifiable.
+     */
+    
+    // Fonction pour charger le prochain numéro automatiquement
+    async function loadNextNumero() {
+        const numeroInput = document.getElementById('numero_apprenant');
+        const btnRegenerer = document.getElementById('btn-regenerer-numero');
+        
+        // Afficher un indicateur de chargement
+        numeroInput.placeholder = 'Génération en cours...';
+        if (btnRegenerer) btnRegenerer.disabled = true;
+        
+        try {
+            const response = await fetch('/inscriptions/api/next-numero');
+            const data = await response.json();
+            
+            if (data.success && data.numero) {
+                // Remplir le champ uniquement s'il est vide (pour ne pas écraser une valeur existante)
+                if (!numeroInput.value.trim()) {
+                    numeroInput.value = data.numero;
+                }
+                numeroInput.placeholder = 'Ex: ' + data.numero;
+            } else {
+                console.error('Erreur lors de la génération du numéro:', data);
+                numeroInput.placeholder = 'Erreur - saisir manuellement';
+            }
+        } catch (error) {
+            console.error('Erreur de connexion:', error);
+            numeroInput.placeholder = 'Erreur - saisir manuellement';
+        } finally {
+            if (btnRegenerer) btnRegenerer.disabled = false;
+        }
+    }
+    
+    // Fonction pour régénérer le numéro manuellement
+    async function regenererNumero() {
+        const numeroInput = document.getElementById('numero_apprenant');
+        const btnRegenerer = document.getElementById('btn-regenerer-numero');
+        
+        // Confirmer la régénération si le champ n'est pas vide
+        if (numeroInput.value.trim() && !confirm('Voulez-vous vraiment remplacer le numéro actuel ?')) {
+            return;
+        }
+        
+        // Afficher l'indicateur de chargement
+        const originalText = numeroInput.value;
+        numeroInput.value = 'Génération...';
+        btnRegenerer.disabled = true;
+        
+        try {
+            const response = await fetch('/inscriptions/api/next-numero');
+            const data = await response.json();
+            
+            if (data.success && data.numero) {
+                numeroInput.value = data.numero;
+            } else {
+                numeroInput.value = originalText;
+                alert('Erreur lors de la génération du numéro. Veuillez réessayer.');
+            }
+        } catch (error) {
+            numeroInput.value = originalText;
+            alert('Erreur de connexion. Veuillez réessayer.');
+        } finally {
+            btnRegenerer.disabled = false;
+        }
+    }
+    
+    // Charger le numéro automatiquement au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadNextNumero();
+        
+        // Ajouter l'événement au bouton de régénération
+        const btnRegenerer = document.getElementById('btn-regenerer-numero');
+        if (btnRegenerer) {
+            btnRegenerer.addEventListener('click', regenererNumero);
+        }
+    });
+    
+    // Validation en temps réel du format du numéro
+    document.getElementById('numero_apprenant').addEventListener('input', function(e) {
+        const value = e.target.value.toUpperCase();
+        const pattern = /^[0-9]{2}-[0-9]{3}$/;
+        
+        if (value && !pattern.test(value)) {
+            e.target.setCustomValidity('Format attendu: AA-NNN (ex: 25-001)');
+        } else {
+            e.target.setCustomValidity('');
+        }
+    });
+</script>
+
+<!-- JavaScript pour la validation -->
+<script src="{{ url_for('static', filename='js/inserer_une_inscription.js') }}"></script>
+{% endblock %}

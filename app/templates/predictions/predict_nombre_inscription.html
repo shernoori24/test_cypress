@@ -1,0 +1,194 @@
+<!-- app/templates/predictions/predict_nombre_inscription.html -->
+{% extends "base.html" %}
+
+{% block title %}Prédictions IA - Inscriptions{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-4">
+    <!-- Header avec titre et actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-0">
+                        <i class="fas fa-robot text-primary"></i>
+                        Prédictions IA - Inscriptions
+                    </h1>
+                    <p class="text-muted mb-0">Analyse prédictive basée sur l'intelligence artificielle</p>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="refreshModels()">
+                        <i class="fas fa-sync-alt"></i> Actualiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes de statut -->
+    <div id="alerts-container"></div>
+
+    <!-- Cards de résumé -->
+    <div class="row mb-4">
+        <!-- Prédiction prochaine année -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="fas fa-calendar-plus fa-2x"></i>
+                    </div>
+                    <h3 class="h4 mb-1" id="next-year-prediction">
+                        {{ quick_predictions.next_year if quick_predictions.next_year else '---' }}
+                    </h3>
+                    <p class="text-muted mb-0">Inscriptions prévues<br>prochaine année</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total 5 ans -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                    <h3 class="h4 mb-1" id="total-5-years">
+                        {{ quick_predictions.total_5_years if quick_predictions.total_5_years else '---' }}
+                    </h3>
+                    <p class="text-muted mb-0">Total prédictions<br>5 prochaines années</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moyenne mensuelle -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-calendar-alt fa-2x"></i>
+                    </div>
+                    <h3 class="h4 mb-1" id="avg-monthly">
+                        {{ quick_predictions.avg_monthly if quick_predictions.avg_monthly else '---' }}
+                    </h3>
+                    <p class="text-muted mb-0">Moyenne mensuelle<br>prédite</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Données historiques -->
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="fas fa-database fa-2x"></i>
+                    </div>
+                    <h3 class="h4 mb-1" id="years-data">
+                        {{ historical_data.years_of_data if historical_data.years_of_data else '---' }}
+                    </h3>
+                    <p class="text-muted mb-0">Années de données<br>historiques</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <!-- Onglets pour les graphiques -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <ul class="nav nav-tabs card-header-tabs" id="predictionTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="yearly-tab" data-bs-toggle="tab" data-bs-target="#yearly" type="button" role="tab">
+                                <i class="fas fa-calendar"></i> Prédictions Annuelles
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="monthly-tab" data-bs-toggle="tab" data-bs-target="#monthly" type="button" role="tab">
+                                <i class="fas fa-calendar-alt"></i> Prédictions Mensuelles
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="weekly-tab" data-bs-toggle="tab" data-bs-target="#weekly" type="button" role="tab">
+                                <i class="fas fa-calendar-week"></i> Prédictions Hebdomadaires
+                            </button>
+                        </li>
+                        
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="predictionTabsContent">
+                        <!-- Onglet Prédictions Annuelles -->
+                        <div class="tab-pane fade show active" id="yearly" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Évolution Annuelle des Inscriptions</h6>
+                                        <div class="model-info" id="yearly-model-info">
+                                            <small class="text-muted">Chargement...</small>
+                                        </div>
+                                    </div>
+                                    <div style="height: 400px;">
+                                        <canvas id="yearlyChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Onglet Prédictions Mensuelles -->
+                        <div class="tab-pane fade" id="monthly" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Évolution Mensuelle des Inscriptions</h6>
+                                        <div class="model-info" id="monthly-model-info">
+                                            <small class="text-muted">Chargement...</small>
+                                        </div>
+                                    </div>
+                                    <div style="height: 400px;">
+                                        <canvas id="monthlyChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Onglet Prédictions Hebdomadaires -->
+                        <div class="tab-pane fade" id="weekly" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Évolution Hebdomadaire des Inscriptions</h6>
+                                        <div class="model-info" id="weekly-model-info">
+                                            <small class="text-muted">Chargement...</small>
+                                        </div>
+                                    </div>
+                                    <div style="height: 400px;">
+                                        <canvas id="weeklyChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal de chargement supprimé pour éviter les blocages -->
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/predictions/predict_nombre_inscription_simple.js') }}"></script>
+<script>
+    // Initialiser l'application au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🎯 Initialisation du dashboard de prédictions...');
+        initializePredictionDashboard();
+    });
+</script>
+{% endblock %}

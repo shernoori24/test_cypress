@@ -1,0 +1,1516 @@
+<script>
+// Fonction pour afficher les évaluations dans le tableau
+function afficherEvaluations(evaluations) {
+    const tbody = document.querySelector('#tableEvaluations tbody');
+    tbody.innerHTML = '';
+    if (!evaluations || evaluations.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="8" class="text-center">Aucune évaluation disponible</td>';
+        tbody.appendChild(tr);
+        return;
+    }
+    evaluations.forEach(ev => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${ev.Date || ''}</td>
+            <td>${ev.Note_test_sur_20 || ''}</td>
+            <td>${ev.Comprehension_orale || ''}</td>
+            <td>${ev.Comprehension_ecrit || ''}</td>
+            <td>${ev.Production_orale || ''}</td>
+            <td>${ev.Production_ecrit || ''}</td>
+            <td>${ev.Observation || ''}</td>
+            <td>${ev.Niveau_global || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Afficher la grille de progression (titre + liste des capacités)
+function afficherGrilleProgression(grille) {
+    const container = document.getElementById('grilleProgressionContainer');
+    container.innerHTML = '';
+    if (!grille || Object.keys(grille).length === 0) {
+        return;
+    }
+
+    const title = grille.title || (`Grille progression ${grille.level || ''}`);
+    let html = `
+        <div class="card border-secondary">
+            <div class="card-header bg-light">
+                <strong>${title}</strong>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                `;
+
+    const caps = grille.capabilities || [];
+    caps.forEach(cap => {
+        html += `<li>${cap}</li>`;
+    });
+
+    html += `
+                </ul>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+// Exemple d'intégration avec la sélection d'un apprenant
+function chargerDetailsApprenant(numero_apprenant) {
+    fetch('/api/apprenant_details/' + numero_apprenant)
+        .then(response => response.json())
+        .then(data => {
+            afficherEvaluations(data.evaluations || []);
+            // ... autres traitements pour afficher les infos personnelles ...
+        });
+}
+
+// Si tu as déjà une fonction qui gère la sélection, appelle chargerDetailsApprenant(numero) au bon endroit
+</script>
+{% extends "base.html" %}
+{% block title %}Rapport Activité Apprenant{% endblock %}
+
+{% block body %}
+<style>
+.result-item:hover {
+    background-color: #f8f9fa;
+}
+.result-item {
+    transition: background-color 0.2s;
+}
+#resultsContainer {
+    border-top: none !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.col-md-2-4 {
+    flex: 0 0 auto;
+    width: 20%;
+}
+@media (max-width: 768px) {
+    .col-md-2-4 {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+}
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-user-graduate"></i> Rapport d'Activité - Apprenant
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Sélecteur d'apprenant avec recherche -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="searchApprenant" class="form-label">
+                                <i class="fas fa-search"></i> Rechercher un apprenant :
+                            </label>
+                            <div class="position-relative">
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="searchApprenant" 
+                                       placeholder="Tapez le nom, prénom ou numéro de l'apprenant..."
+                                       autocomplete="off"
+                                       oninput="rechercherApprenants(); viderSelection();"
+                                       onblur="masquerResultats()"
+                                       onfocus="afficherResultats()">
+                                <div id="resultsContainer" class="position-absolute w-100 bg-white border rounded-bottom shadow-sm d-none" style="z-index: 1000; max-height: 200px; overflow-y: auto;">
+                                    <!-- Les résultats de recherche apparaîtront ici -->
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedApprenantNumero" value="">
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end gap-2">
+                            <button class="btn btn-success" onclick="chargerApprenant()">
+                                <i class="fas fa-sync-alt"></i> Charger les données
+                            </button>
+                            <button class="btn btn-danger" onclick="exporterPDF()" id="btnExportPDF" disabled>
+                                <i class="fas fa-file-pdf"></i> Export PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Zone de chargement -->
+                    <div id="loadingZone" class="text-center d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2">Chargement des données...</p>
+                    </div>
+
+                    <!-- Zone de contenu principal -->
+                    <div id="contentZone" class="d-none">
+                        
+                        <!-- Alerte de qualité des données -->
+                        <div id="dataQualityAlert" class="alert d-none" role="alert">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-info-circle"></i>
+                                    <span id="dataQualityMessage"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations de l'apprenant -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0"><i class="fas fa-id-card"></i> Informations Personnelles</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row" id="infoPersonnelle">
+                                            <!-- Les informations seront chargées ici -->
+                                        </div>
+                                        <!-- Évaluation dans le temps -->
+                                        <div class="card mt-4">
+                                            <div class="card-header">
+                                                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Évaluation dans le temps</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-bordered" id="tableEvaluations">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Note /20</th>
+                                                            <th>Compréhension orale</th>
+                                                            <th>Compréhension écrite</th>
+                                                            <th>Production orale</th>
+                                                            <th>Production écrite</th>
+                                                            <th>Observation</th>
+                                                            <th>Niveau global</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <!-- Rempli dynamiquement -->
+                                                    </tbody>
+                                                </table>
+                                                <!-- Conteneur pour la grille de progression -->
+                                                <div id="grilleProgressionContainer" class="mt-3">
+                                                    <!-- Rempli dynamiquement -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filtrage par période -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h6 class="mb-0"><i class="fas fa-filter"></i> Filtrage par période</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row align-items-end">
+                                            <div class="col-md-3">
+                                                <label for="dateDebut" class="form-label">Date de début</label>
+                                                <input type="date" class="form-control" id="dateDebut" onchange="validerDates()">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="dateFin" class="form-label">Date de fin</label>
+                                                <input type="date" class="form-control" id="dateFin" onchange="validerDates()">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="setDateRange('week')">Cette semaine</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="setDateRange('month')">Ce mois</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="setDateRange('30days')">30 derniers jours</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="setDateRange('all')">Tout</button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button class="btn btn-primary" id="btnAppliquerFiltre" onclick="appliquerFiltre()">
+                                                    <i class="fas fa-filter"></i> Appliquer
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <small class="text-muted" id="periodeInfo">Toutes les données disponibles</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statistiques rapides -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center border-success">
+                                    <div class="card-body">
+                                        <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                                        <h4 class="text-success" id="totalPresences">0</h4>
+                                        <p class="card-text">Total Présences</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-warning">
+                                    <div class="card-body">
+                                        <i class="fas fa-calendar-day fa-2x text-warning mb-2"></i>
+                                        <h4 class="text-warning" id="joursUniques">0</h4>
+                                        <p class="card-text">Jours Uniques</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-info">
+                                    <div class="card-body">
+                                        <i class="fas fa-tasks fa-2x text-info mb-2"></i>
+                                        <h4 class="text-info" id="activitesUniques">0</h4>
+                                        <p class="card-text">Activités Différentes</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-dark">
+                                    <div class="card-body">
+                                        <i class="fas fa-clock fa-2x text-dark mb-2"></i>
+                                        <h4 class="text-dark" id="totalHeuresCard">0h00</h4>
+                                        <p class="card-text">Total Heures</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Graphiques -->
+                        <div class="row mb-4">
+                            <!-- Graphique présences par date -->
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-chart-line"></i> Présences par Date</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="chartPresenceDate" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Graphique présences par jour de la semaine -->
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Répartition par Jour</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="chartPresenceJour" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nouveau graphique d'évolution par période -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="fas fa-chart-area"></i> Évolution de la Présence par Période</h6>
+                                        <small>Analyse de l'assiduité depuis le premier jour de formation</small>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="chartEvolutionPeriode" width="800" height="300"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tableau détaillé des présences -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header bg-dark text-white">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0"><i class="fas fa-table"></i> Détail des Présences</h6>
+                                            <button class="btn btn-sm btn-outline-light" onclick="reloadData()">
+                                                <i class="fas fa-sync-alt"></i> Actualiser
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Zone pour message sans présence -->
+                                        <div id="noPresenceMessage" class="alert alert-warning d-none" role="alert">
+                                            <div class="text-center">
+                                                <i class="fas fa-calendar-times fa-3x mb-3 text-warning"></i>
+                                                <h5>Aucune présence enregistrée</h5>
+                                                <p class="mb-0">Cet apprenant n'a aucune présence enregistrée dans le système.</p>
+                                                <small class="text-muted">Vérifiez que les données de présence sont bien saisies ou contactez l'administrateur.</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="table-responsive" id="presenceTableContainer">
+                                            <table class="table table-striped" id="tablePresences">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Activité</th>
+                                                        <th>Début</th>
+                                                        <th>Fin</th>
+                                                        <th>Durée</th>
+                                                        <th>Encadrant</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="bodyTablePresences">
+                                                    <!-- Les données seront chargées ici -->
+                                                </tbody>
+                                                <tfoot class="table-info">
+                                                    <tr>
+                                                        <th colspan="4" class="text-end">Total des heures :</th>
+                                                        <th id="totalHeures" class="text-center fw-bold">0h00</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Zone d'erreur -->
+                    <div id="errorZone" class="alert alert-danger d-none" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i> <span id="errorMessage"></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let chartPresenceDate = null;
+let chartPresenceJour = null;
+let chartEvolutionPeriode = null;
+
+// Liste des apprenants pour la recherche
+const apprenants = [
+    {% for apprenant in apprenants %}
+    {
+        numero: "{{ apprenant.numero }}",
+        nom_complet: "{{ apprenant.nom_complet }}",
+        nom: "{{ apprenant.nom_complet.split(' ')[1] if apprenant.nom_complet.split(' ')|length > 1 else apprenant.nom_complet }}",
+        prenom: "{{ apprenant.nom_complet.split(' ')[0] if apprenant.nom_complet.split(' ')|length > 1 else '' }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+let resultatsVisibles = false;
+
+// Numéro apprenant éventuel passé par l'URL (route param)
+const numeroApprenantInitial = {{ numero_apprenant_initial|default('')|tojson }};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (numeroApprenantInitial) {
+        const hiddenInput = document.getElementById('selectedApprenantNumero');
+        const searchInput = document.getElementById('searchApprenant');
+        hiddenInput.value = numeroApprenantInitial;
+
+        // Tenter d'afficher le nom complet si présent dans la liste
+        const found = (typeof apprenants !== 'undefined' ? apprenants.find(a => a.numero === numeroApprenantInitial) : null);
+        if (found && searchInput) {
+            searchInput.value = found.nom_complet;
+        } else if (searchInput) {
+            // À défaut, on met le numéro
+            searchInput.value = numeroApprenantInitial;
+        }
+
+        // Masquer la liste de résultats au chargement
+        const container = document.getElementById('resultsContainer');
+        if (container) {
+            container.classList.add('d-none');
+        }
+
+        // Charger directement les données
+        chargerApprenant();
+    }
+});
+
+function rechercherApprenants() {
+    const searchTerm = document.getElementById('searchApprenant').value.toLowerCase().trim();
+    const container = document.getElementById('resultsContainer');
+    
+    // Si le champ est vide, afficher tous les apprenants
+    if (searchTerm.length === 0) {
+        afficherTousLesApprenants();
+        return;
+    }
+    
+    // Filtrer les apprenants selon le terme de recherche
+    const resultats = apprenants.filter(apprenant => {
+        return apprenant.nom_complet.toLowerCase().includes(searchTerm) ||
+               apprenant.numero.toLowerCase().includes(searchTerm);
+    });
+    
+    // Afficher les résultats
+    if (resultats.length > 0) {
+        let html = '';
+        resultats.slice(0, 10).forEach(apprenant => { // Limiter à 10 résultats
+            html += `
+                <div class="p-2 border-bottom cursor-pointer result-item" 
+                     onmousedown="selectionnerApprenant('${apprenant.numero}', '${apprenant.nom_complet}')"
+                     style="cursor: pointer;">
+                    <div class="d-flex justify-content-between">
+                        <span><strong>${apprenant.nom_complet}</strong></span>
+                        <span class="text-muted">${apprenant.numero}</span>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        container.classList.remove('d-none');
+        resultatsVisibles = true;
+    } else {
+        container.innerHTML = '<div class="p-2 text-muted">Aucun apprenant trouvé</div>';
+        container.classList.remove('d-none');
+        resultatsVisibles = true;
+    }
+}
+
+function selectionnerApprenant(numero, nomComplet) {
+    document.getElementById('searchApprenant').value = nomComplet;
+    document.getElementById('selectedApprenantNumero').value = numero;
+    document.getElementById('resultsContainer').classList.add('d-none');
+    resultatsVisibles = false;
+}
+
+function viderSelection() {
+    document.getElementById('selectedApprenantNumero').value = '';
+    // Réafficher tous les apprenants si le champ devient vide
+    const searchTerm = document.getElementById('searchApprenant').value;
+    if (searchTerm.length === 0) {
+        afficherTousLesApprenants();
+    }
+}
+
+function masquerResultats() {
+    // Délai pour permettre le clic sur un résultat
+    setTimeout(() => {
+        if (!resultatsVisibles) return;
+        document.getElementById('resultsContainer').classList.add('d-none');
+        resultatsVisibles = false;
+    }, 150);
+}
+
+function afficherResultats() {
+    const searchTerm = document.getElementById('searchApprenant').value;
+    
+    // Si le champ est vide, afficher tous les apprenants (maximum 10)
+    if (searchTerm.length === 0) {
+        afficherTousLesApprenants();
+    } else {
+        rechercherApprenants();
+    }
+}
+
+function afficherTousLesApprenants() {
+    const container = document.getElementById('resultsContainer');
+    
+    if (apprenants.length > 0) {
+        let html = '';
+        // Afficher TOUS les apprenants (pas de limitation)
+        apprenants.forEach(apprenant => {
+            html += `
+                <div class="p-2 border-bottom cursor-pointer result-item" 
+                     onmousedown="selectionnerApprenant('${apprenant.numero}', '${apprenant.nom_complet}')"
+                     style="cursor: pointer;">
+                    <div class="d-flex justify-content-between">
+                        <span><strong>${apprenant.nom_complet}</strong></span>
+                        <span class="text-muted">${apprenant.numero}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Ajouter un message informatif en bas
+        html += `<div class="p-2 text-muted text-center small border-top bg-light">
+                    <i class="fas fa-users"></i> ${apprenants.length} apprenants disponibles
+                 </div>`;
+        
+        container.innerHTML = html;
+        container.classList.remove('d-none');
+        resultatsVisibles = true;
+    } else {
+        container.innerHTML = '<div class="p-2 text-muted">Aucun apprenant disponible</div>';
+        container.classList.remove('d-none');
+        resultatsVisibles = true;
+    }
+}
+
+async function chargerApprenant() {
+    let numeroApprenant = document.getElementById('selectedApprenantNumero').value;
+    // Si aucun numéro sélectionné (utilisateur a tapé mais n'a pas choisi), essayer de retrouver depuis le champ de recherche
+    if (!numeroApprenant) {
+        const searchValue = document.getElementById('searchApprenant').value.trim();
+        if (searchValue) {
+            const found = apprenants.find(a => a.numero === searchValue || a.nom_complet.toLowerCase() === searchValue.toLowerCase());
+            if (found) {
+                numeroApprenant = found.numero;
+                document.getElementById('selectedApprenantNumero').value = numeroApprenant;
+                console.info('Apprenant auto-sélectionné depuis le champ de recherche:', numeroApprenant);
+            }
+        }
+    }
+
+    if (!numeroApprenant) {
+        alert('Veuillez d\'abord sélectionner un apprenant dans la liste de recherche.');
+        document.getElementById('contentZone').classList.add('d-none');
+        document.getElementById('errorZone').classList.add('d-none');
+        return;
+    }
+
+    // Afficher le loading
+    document.getElementById('loadingZone').classList.remove('d-none');
+    document.getElementById('contentZone').classList.add('d-none');
+    document.getElementById('errorZone').classList.add('d-none');
+
+    try {
+        // Charger les détails de l'apprenant
+        const response = await fetch(`/api/apprenant_details/${numeroApprenant}`);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // Afficher les informations personnelles
+        afficherInfoPersonnelle(data.apprenant);
+        
+        // Afficher le message de qualité des données
+        afficherMessageQualite(data);
+        
+        // Afficher les statistiques
+        afficherStatistiques(data.statistiques);
+
+        // Afficher les évaluations (si présentes)
+        if (data.evaluations) {
+            afficherEvaluations(data.evaluations || []);
+        }
+
+        // Afficher la grille de progression (si présente)
+        if (data.grille_progression) {
+            afficherGrilleProgression(data.grille_progression || {});
+        }
+
+        // Charger et afficher les graphiques
+        await chargerGraphiques(numeroApprenant);
+
+        // Afficher le tableau des présences ou le message "aucune présence"
+        afficherTableauPresences(data.presences, data.presence_status);
+
+        // Masquer le loading et afficher le contenu
+        document.getElementById('loadingZone').classList.add('d-none');
+        document.getElementById('contentZone').classList.remove('d-none');
+
+        // Activer le bouton PDF
+        togglePDFButton(true);
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('loadingZone').classList.add('d-none');
+        document.getElementById('errorMessage').textContent = error.message;
+        document.getElementById('errorZone').classList.remove('d-none');
+
+        // Désactiver le bouton PDF en cas d'erreur
+        togglePDFButton(false);
+    }
+}
+
+function afficherInfoPersonnelle(apprenant) {
+    const container = document.getElementById('infoPersonnelle');
+    // Générer la vignette photo avec fallback jpg/jpeg/default
+    const numero = apprenant['N°'] || '';
+    const nom = apprenant['NOM'] || '';
+    const prenom = apprenant['Prénom'] || '';
+    const photoUrl = `/photos_profils_apprenants/${numero}.jpg`;
+    const photoUrlJpeg = `/photos_profils_apprenants/${numero}.jpeg`;
+    const defaultUrl = '/photos_profils_apprenants/default.jpg';
+    const vignetteHtml = `
+        <div class="d-flex align-items-center mb-3">
+            <img src="${photoUrl}" alt="Photo ${numero}" class="rounded-circle me-3" style="width:56px;height:56px;object-fit:cover;border:2px solid #dee2e6;"
+                onerror="this.onerror=null;this.src='${photoUrlJpeg}';this.onerror=function(){this.src='${defaultUrl}';}">
+            <div>
+                <div class="fw-bold text-primary" style="font-size:1.1rem;">${prenom} ${nom}</div>
+                <div class="text-muted">${numero}</div>
+            </div>
+        </div>
+    `;
+    container.innerHTML = `
+        <div class="col-md-12 mb-2">
+            ${vignetteHtml}
+        </div>
+        <div class="col-md-4">
+            <strong><i class="fas fa-user"></i> Nom Complet:</strong><br>
+            ${prenom} ${nom}
+        </div>
+        <div class="col-md-4">
+            <strong><i class="fas fa-id-badge"></i> Numéro:</strong><br>
+            ${numero}
+        </div>
+        <div class="col-md-4">
+            <strong><i class="fas fa-venus-mars"></i> Sexe:</strong><br>
+            ${apprenant['Sexe'] || ''}
+        </div>
+        <div class="col-md-4 mt-3">
+            <strong><i class="fas fa-birthday-cake"></i> Âge:</strong><br>
+            ${apprenant['Age'] || ''}
+        </div>
+        <div class="col-md-4 mt-3">
+            <strong><i class="fas fa-flag"></i> Nationalité:</strong><br>
+            ${apprenant['Nationalité'] || ''}
+        </div>
+        <div class="col-md-4 mt-3">
+            <strong><i class="fas fa-map-marker-alt"></i> Ville:</strong><br>
+            ${apprenant['Ville'] || ''}
+        </div>
+        <div class="col-md-6 mt-3">
+            <strong><i class="fas fa-phone"></i> Téléphone:</strong><br>
+            ${apprenant['Téléphone'] || ''}
+        </div>
+        <div class="col-md-6 mt-3">
+            <strong><i class="fas fa-envelope"></i> Email:</strong><br>
+            ${apprenant['Email'] || ''}
+        </div>
+    `;
+}
+
+function afficherMessageQualite(data) {
+    const alertContainer = document.getElementById('dataQualityAlert');
+    const messageElement = document.getElementById('dataQualityMessage');
+    
+    if (data.message && data.message_type) {
+        // Déterminer la classe CSS selon le type de message
+        let alertClass = '';
+        let iconClass = '';
+        
+        switch (data.message_type) {
+            case 'success':
+                alertClass = 'alert-success';
+                iconClass = 'fas fa-check-circle';
+                break;
+            case 'warning':
+                alertClass = 'alert-warning';
+                iconClass = 'fas fa-exclamation-triangle';
+                break;
+            case 'error':
+                alertClass = 'alert-danger';
+                iconClass = 'fas fa-times-circle';
+                break;
+            default:
+                alertClass = 'alert-info';
+                iconClass = 'fas fa-info-circle';
+        }
+        
+        alertContainer.className = `alert ${alertClass}`;
+        alertContainer.classList.remove('d-none');
+        
+        messageElement.innerHTML = `<i class="${iconClass}"></i> ${data.message}`;
+    } else {
+        alertContainer.classList.add('d-none');
+    }
+}
+
+async function reloadData() {
+    try {
+        const response = await fetch('/api/reload_data', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.error) {
+            alert('Erreur lors du rechargement: ' + result.error);
+        } else {
+            alert('Données rechargées avec succès!');
+            // Recharger l'apprenant actuel si il y en a un
+            const numeroApprenant = document.getElementById('selectedApprenantNumero').value;
+            if (numeroApprenant) {
+                chargerApprenant();
+            }
+        }
+    } catch (error) {
+        alert('Erreur: ' + error.message);
+    }
+}
+
+function afficherStatistiques(stats) {
+    // Afficher les statistiques avec les données calculées côté serveur
+    document.getElementById('totalPresences').textContent = stats.total_presences || 0;
+    document.getElementById('joursUniques').textContent = stats.jours_uniques || 0;
+    document.getElementById('activitesUniques').textContent = (stats.activites_uniques ? stats.activites_uniques.length : 0);
+    
+    // Utiliser les heures totales calculées côté serveur
+    document.getElementById('totalHeuresCard').textContent = stats.total_heures || '0h00';
+}
+
+async function chargerGraphiques(numeroApprenant) {
+    try {
+        // Charger les données pour le graphique des présences par date
+        const response = await fetch(`/api/apprenant_presence_chart/${numeroApprenant}`);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // Graphique des présences par date
+        const ctxDate = document.getElementById('chartPresenceDate');
+        
+        if (!ctxDate) {
+            console.error('Canvas chartPresenceDate non trouvé');
+            return;
+        }
+        
+        const ctx2d = ctxDate.getContext('2d');
+        
+        // Détruire le graphique existant s'il existe
+        if (chartPresenceDate) {
+            chartPresenceDate.destroy();
+        }
+
+        chartPresenceDate = new Chart(ctx2d, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Nombre de présences',
+                    data: data.data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Évolution des présences dans le temps'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Charger les données pour le graphique par jour de la semaine
+        const responseJours = await fetch(`/api/apprenant_presence_jours/${numeroApprenant}`);
+        const dataJours = await responseJours.json();
+
+        const joursLabels = dataJours.labels || ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        const joursData = dataJours.data || [0, 0, 0, 0, 0, 0, 0];
+        
+        const ctxJour = document.getElementById('chartPresenceJour').getContext('2d');
+        
+        if (chartPresenceJour) {
+            chartPresenceJour.destroy();
+        }
+
+        chartPresenceJour = new Chart(ctxJour, {
+            type: 'bar',
+            data: {
+                labels: joursLabels,
+                datasets: [{
+                    label: 'Présences par jour',
+                    data: joursData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 205, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)',
+                        'rgba(199, 199, 199, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(199, 199, 199, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Répartition des présences par jour de la semaine'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Charger les données pour le graphique d'évolution par période
+        const responseEvolution = await fetch(`/api/apprenant_evolution_periode/${numeroApprenant}`);
+        const dataEvolution = await responseEvolution.json();
+
+        if (dataEvolution.labels && dataEvolution.labels.length > 0) {
+            const ctxEvolution = document.getElementById('chartEvolutionPeriode').getContext('2d');
+            
+            if (chartEvolutionPeriode) {
+                chartEvolutionPeriode.destroy();
+            }
+
+            chartEvolutionPeriode = new Chart(ctxEvolution, {
+                type: 'line',
+                data: {
+                    labels: dataEvolution.labels,
+                    datasets: [
+                        {
+                            label: 'Présences quotidiennes',
+                            data: dataEvolution.data,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'Moyenne mobile (7 jours)',
+                            data: dataEvolution.moyenne_mobile,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Évolution de la présence du ${dataEvolution.date_debut || ''} au ${dataEvolution.date_fin || ''} (${dataEvolution.duree_formation || 0} jours)`
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: function(context) {
+                                    const date = new Date(context[0].label);
+                                    return date.toLocaleDateString('fr-FR');
+                                },
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    if (label.includes('Moyenne')) {
+                                        return `${label}: ${value} présences/jour`;
+                                    }
+                                    return `${label}: ${value} présence${value > 1 ? 's' : ''}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Période de formation'
+                            },
+                            ticks: {
+                                maxTicksLimit: 10,
+                                callback: function(value, index, values) {
+                                    const date = new Date(this.getLabelForValue(value));
+                                    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Nombre de présences'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Erreur lors du chargement des graphiques:', error);
+    }
+}
+
+function afficherTableauPresences(presences, presenceStatus) {
+    const tbody = document.getElementById('bodyTablePresences');
+    const noPresenceMessage = document.getElementById('noPresenceMessage');
+    const tableContainer = document.getElementById('presenceTableContainer');
+    
+    tbody.innerHTML = '';
+
+    if (!presences || presences.length === 0 || presenceStatus === 'no_presence') {
+        // Afficher le message "aucune présence"
+        noPresenceMessage.classList.remove('d-none');
+        tableContainer.classList.add('d-none');
+        document.getElementById('totalHeures').textContent = '0h00';
+        document.getElementById('totalHeuresCard').textContent = '0h00';
+        return;
+    }
+
+    // Masquer le message et afficher le tableau
+    noPresenceMessage.classList.add('d-none');
+    tableContainer.classList.remove('d-none');
+
+    let totalMinutes = 0;
+
+    presences.forEach(presence => {
+        const row = tbody.insertRow();
+        const duree = presence['Durée Activité Apprenants'] || '';
+        
+        // Formatter la date si elle est au format DD/MM/YYYY
+        let dateFormatted = presence['Date du Jour'] || '';
+        if (dateFormatted && dateFormatted.includes('/')) {
+            try {
+                const parts = dateFormatted.split('/');
+                if (parts.length === 3) {
+                    const date = new Date(parts[2], parts[1] - 1, parts[0]);
+                    dateFormatted = date.toLocaleDateString('fr-FR');
+                }
+            } catch (e) {
+                // Garder le format original en cas d'erreur
+            }
+        }
+        
+        row.innerHTML = `
+            <td>${dateFormatted}</td>
+            <td>${presence['Activités'] || ''}</td>
+            <td>${presence['Activités Apprenants Début'] || ''}</td>
+            <td>${presence['Activités Apprenants Fin'] || ''}</td>
+            <td>${duree}</td>
+            <td>${presence['Encadrant'] || ''}</td>
+        `;
+
+        // Calculer le total des minutes
+        totalMinutes += convertirDureeEnMinutes(duree);
+    });
+
+    // Afficher le total des heures dans le tableau et la carte
+    const totalFormate = convertirMinutesEnHeures(totalMinutes);
+    document.getElementById('totalHeures').textContent = totalFormate;
+    document.getElementById('totalHeuresCard').textContent = totalFormate;
+}
+
+function convertirDureeEnMinutes(duree) {
+    if (!duree || typeof duree !== 'string') {
+        return 0;
+    }
+
+    // Nettoyer la chaîne et la mettre en minuscules
+    duree = duree.toString().toLowerCase().trim();
+
+    let totalMinutes = 0;
+
+    try {
+        // Format "HH:MM" ou "H:MM"
+        const formatHHMM = duree.match(/^(\d{1,2}):(\d{2})$/);
+        if (formatHHMM) {
+            const heures = parseInt(formatHHMM[1], 10);
+            const minutes = parseInt(formatHHMM[2], 10);
+            return (heures * 60) + minutes;
+        }
+
+        // Format "Xh" ou "XhYY" ou "X h YY"
+        const formatHeure = duree.match(/(\d+)\s*h(?:\s*(\d+))?/);
+        if (formatHeure) {
+            const heures = parseInt(formatHeure[1], 10);
+            const minutes = formatHeure[2] ? parseInt(formatHeure[2], 10) : 0;
+            return (heures * 60) + minutes;
+        }
+
+        // Format "XX min" ou "XXmin"
+        const formatMinutes = duree.match(/(\d+)\s*min/);
+        if (formatMinutes) {
+            return parseInt(formatMinutes[1], 10);
+        }
+
+        // Format décimal "X.Y" (heures décimales)
+        const formatDecimal = duree.match(/^(\d+)\.(\d+)$/);
+        if (formatDecimal) {
+            const heures = parseInt(formatDecimal[1], 10);
+            const decimales = parseInt(formatDecimal[2], 10);
+            const minutes = Math.round((decimales / Math.pow(10, formatDecimal[2].length)) * 60);
+            return (heures * 60) + minutes;
+        }
+
+        // Si c'est juste un nombre, on considère que ce sont des heures
+        const nombre = parseFloat(duree);
+        if (!isNaN(nombre)) {
+            return Math.round(nombre * 60);
+        }
+
+    } catch (error) {
+        console.warn('Erreur lors de la conversion de la durée:', duree, error);
+    }
+
+    return 0;
+}
+
+function convertirMinutesEnHeures(totalMinutes) {
+    if (totalMinutes === 0) {
+        return '0h00';
+    }
+
+    const heures = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${heures}h${minutes.toString().padStart(2, '0')}`;
+}
+
+// === FONCTIONS DE FILTRAGE PAR DATES ===
+
+// Variables globales pour le filtrage
+let dateDebutFiltre = null;
+let dateFinFiltre = null;
+
+function setDateRange(type) {
+    const today = new Date();
+    const dateDebut = document.getElementById('dateDebut');
+    const dateFin = document.getElementById('dateFin');
+    
+    switch(type) {
+        case 'week':
+            // Cette semaine (du lundi à dimanche)
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - today.getDay() + 1);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            
+            dateDebut.value = formatDateForInput(monday);
+            dateFin.value = formatDateForInput(sunday);
+            updatePeriodeInfo('Cette semaine');
+            break;
+            
+        case 'month':
+            // Ce mois
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            dateDebut.value = formatDateForInput(firstDay);
+            dateFin.value = formatDateForInput(lastDay);
+            updatePeriodeInfo('Ce mois');
+            break;
+            
+        case '30days':
+            // 30 derniers jours
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            dateDebut.value = formatDateForInput(thirtyDaysAgo);
+            dateFin.value = formatDateForInput(today);
+            updatePeriodeInfo('30 derniers jours');
+            break;
+            
+        case 'all':
+            // Tout effacer
+            dateDebut.value = '';
+            dateFin.value = '';
+            updatePeriodeInfo('Toutes les données disponibles');
+            break;
+    }
+    
+    validerDates();
+}
+
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function updatePeriodeInfo(message) {
+    document.getElementById('periodeInfo').textContent = message;
+}
+
+function validerDates() {
+    const dateDebut = document.getElementById('dateDebut').value;
+    const dateFin = document.getElementById('dateFin').value;
+    const btnAppliquer = document.getElementById('btnAppliquerFiltre');
+    
+    if (dateDebut && dateFin) {
+        if (new Date(dateDebut) > new Date(dateFin)) {
+            updatePeriodeInfo('⚠️ La date de début doit être antérieure à la date de fin');
+            btnAppliquer.disabled = true;
+            return false;
+        }
+    }
+    
+    btnAppliquer.disabled = false;
+    return true;
+}
+
+function appliquerFiltre() {
+    const numeroApprenant = document.getElementById('selectedApprenantNumero').value;
+    
+    if (!numeroApprenant) {
+        alert('Veuillez d\'abord sélectionner un apprenant.');
+        return;
+    }
+    
+    if (!validerDates()) {
+        return;
+    }
+    
+    // Récupérer les dates de filtrage
+    dateDebutFiltre = document.getElementById('dateDebut').value;
+    dateFinFiltre = document.getElementById('dateFin').value;
+    
+    // Recharger les données avec le filtre
+    chargerApprenantAvecFiltre();
+}
+
+async function chargerApprenantAvecFiltre() {
+    let numeroApprenant = document.getElementById('selectedApprenantNumero').value;
+    // Fallback depuis le champ de recherche si nécessaire
+    if (!numeroApprenant) {
+        const searchValue = document.getElementById('searchApprenant').value.trim();
+        if (searchValue) {
+            const found = apprenants.find(a => a.numero === searchValue || a.nom_complet.toLowerCase() === searchValue.toLowerCase());
+            if (found) {
+                numeroApprenant = found.numero;
+                document.getElementById('selectedApprenantNumero').value = numeroApprenant;
+                console.info('Apprenant auto-sélectionné depuis le champ de recherche (filtre):', numeroApprenant);
+            }
+        }
+    }
+
+    if (!numeroApprenant) {
+        alert('Veuillez d\'abord sélectionner un apprenant dans la liste de recherche.');
+        document.getElementById('contentZone').classList.add('d-none');
+        document.getElementById('errorZone').classList.add('d-none');
+        return;
+    }
+    
+    // Afficher le loading
+    document.getElementById('loadingZone').classList.remove('d-none');
+    document.getElementById('contentZone').classList.add('d-none');
+    document.getElementById('errorZone').classList.add('d-none');
+
+    try {
+        // Construire l'URL avec les paramètres de filtrage
+        let url = `/api/apprenant_details/${numeroApprenant}`;
+        const params = new URLSearchParams();
+        
+        if (dateDebutFiltre) {
+            params.append('date_debut', dateDebutFiltre);
+        }
+        if (dateFinFiltre) {
+            params.append('date_fin', dateFinFiltre);
+        }
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        // Charger les détails de l'apprenant avec filtrage
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // Afficher les informations (identiques à la fonction normale)
+        afficherInfoPersonnelle(data.apprenant);
+        afficherMessageQualite(data);
+        afficherStatistiques(data.statistiques);
+
+        // Afficher les évaluations filtrées si disponibles
+        if (data.evaluations) {
+            afficherEvaluations(data.evaluations || []);
+        }
+
+        // Afficher la grille de progression (si présente)
+        if (data.grille_progression) {
+            afficherGrilleProgression(data.grille_progression || {});
+        }
+
+        // Charger et afficher les graphiques avec filtrage
+        await chargerGraphiquesAvecFiltre(numeroApprenant);
+
+        // Afficher le tableau des présences filtrées
+        afficherTableauPresences(data.presences, data.presence_status);
+
+        // Mettre à jour l'info de période
+        if (dateDebutFiltre || dateFinFiltre) {
+            let periodeText = 'Période filtrée: ';
+            if (dateDebutFiltre && dateFinFiltre) {
+                periodeText += `du ${formatDateForDisplay(dateDebutFiltre)} au ${formatDateForDisplay(dateFinFiltre)}`;
+            } else if (dateDebutFiltre) {
+                periodeText += `à partir du ${formatDateForDisplay(dateDebutFiltre)}`;
+            } else if (dateFinFiltre) {
+                periodeText += `jusqu'au ${formatDateForDisplay(dateFinFiltre)}`;
+            }
+            updatePeriodeInfo(periodeText);
+        }
+
+        // Masquer le loading et afficher le contenu
+        document.getElementById('loadingZone').classList.add('d-none');
+        document.getElementById('contentZone').classList.remove('d-none');
+
+        // Activer le bouton PDF
+        togglePDFButton(true);
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('loadingZone').classList.add('d-none');
+        document.getElementById('errorMessage').textContent = error.message;
+        document.getElementById('errorZone').classList.remove('d-none');
+
+        // Désactiver le bouton PDF en cas d'erreur
+        togglePDFButton(false);
+    }
+}
+
+async function chargerGraphiquesAvecFiltre(numeroApprenant) {
+    // Construire les URLs avec les paramètres de filtrage
+    const params = new URLSearchParams();
+    if (dateDebutFiltre) params.append('date_debut', dateDebutFiltre);
+    if (dateFinFiltre) params.append('date_fin', dateFinFiltre);
+    const queryString = params.toString() ? '?' + params.toString() : '';
+    
+    try {
+        // Charger toutes les données de graphiques en parallèle avec filtrage
+        const [presenceData, joursData, evolutionData] = await Promise.all([
+            fetch(`/api/apprenant_presence_chart/${numeroApprenant}${queryString}`).then(r => r.json()),
+            fetch(`/api/apprenant_presence_jours/${numeroApprenant}${queryString}`).then(r => r.json()),
+            fetch(`/api/apprenant_evolution_periode/${numeroApprenant}${queryString}`).then(r => r.json())
+        ]);
+
+        // Créer le graphique des présences par date
+        const ctxDate = document.getElementById('chartPresenceDate').getContext('2d');
+        if (chartPresenceDate) {
+            chartPresenceDate.destroy();
+        }
+        
+        chartPresenceDate = new Chart(ctxDate, {
+            type: 'line',
+            data: {
+                labels: presenceData.labels,
+                datasets: [{
+                    label: 'Nombre de présences',
+                    data: presenceData.data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Évolution des présences dans le temps (Filtré)'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Créer le graphique par jour de la semaine
+        const joursLabels = joursData.labels || ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        const joursDataValues = joursData.data || [0, 0, 0, 0, 0, 0, 0];
+        
+        const ctxJour = document.getElementById('chartPresenceJour').getContext('2d');
+        if (chartPresenceJour) {
+            chartPresenceJour.destroy();
+        }
+
+        chartPresenceJour = new Chart(ctxJour, {
+            type: 'bar',
+            data: {
+                labels: joursLabels,
+                datasets: [{
+                    label: 'Présences par jour',
+                    data: joursDataValues,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 205, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)',
+                        'rgba(199, 199, 199, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(199, 199, 199, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Répartition des présences par jour de la semaine (Filtré)'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Créer le graphique d'évolution par période
+        if (evolutionData.labels && evolutionData.labels.length > 0) {
+            const ctxEvolution = document.getElementById('chartEvolutionPeriode').getContext('2d');
+            if (chartEvolutionPeriode) {
+                chartEvolutionPeriode.destroy();
+            }
+
+            chartEvolutionPeriode = new Chart(ctxEvolution, {
+                type: 'line',
+                data: {
+                    labels: evolutionData.labels,
+                    datasets: [
+                        {
+                            label: 'Présences quotidiennes',
+                            data: evolutionData.data,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2
+                        },
+                        {
+                            label: 'Moyenne mobile (7 jours)',
+                            data: evolutionData.moyenne_mobile,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Évolution de la présence (Période filtrée)`
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Période de formation'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Nombre de présences'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Erreur lors du chargement des graphiques:', error);
+    }
+}
+
+function formatDateForDisplay(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+}
+
+// Modifier la fonction chargerApprenant existante pour utiliser le filtrage
+async function chargerApprenant() {
+    // Réinitialiser les filtres
+    dateDebutFiltre = null;
+    dateFinFiltre = null;
+    document.getElementById('dateDebut').value = '';
+    document.getElementById('dateFin').value = '';
+    updatePeriodeInfo('Toutes les données disponibles');
+    
+    // Appeler la fonction de chargement avec filtre (qui sera vide)
+    await chargerApprenantAvecFiltre();
+}
+
+// Fonction pour activer/désactiver le bouton PDF
+function togglePDFButton(enabled) {
+    const btnPDF = document.getElementById('btnExportPDF');
+    if (btnPDF) {
+        btnPDF.disabled = !enabled;
+    }
+}
+</script>
+
+{% block pdf_scripts %}
+<script src="{{ url_for('static', filename='js/rapport_pdf_generator.js') }}"></script>
+{% endblock %}
+
+{% endblock %}
