@@ -1,18 +1,66 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: App Plania Tests
+run-name: ${{ github.actor }} is running Cypress tests on App Plania 
+on: 
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
 jobs:
-  Explore-GitHub-Actions:
+  cypress-tests:
     runs-on: ubuntu-latest
+    
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v5
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      - name:  Checkout repository
+        uses: actions/checkout@v4
+      
+      - name:  Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name:  Install Python dependencies
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name:  Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 📦 Install Cypress dependencies
+        run: |
+          npm install
+          
+      - name: 🏃‍♂️ Start Flask application
+        run: |
+          python main.py &
+          sleep 10  # Attendre que l'app démarre
+        env:
+          FLASK_ENV: testing
+          
+      - name:  Wait for application to be ready
+        run: |
+          timeout 30s bash -c 'until curl -f http://localhost:5555; do sleep 2; done'
+          
+      - name:  Run Cypress tests
+        run: |
+          npx cypress run --headless --browser chrome
+        env:
+          CYPRESS_baseUrl: http://localhost:5555
+          
+      - name:  Upload Cypress screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          
+      - name:  Upload Cypress videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-videos
+          path: cypress/videos

@@ -13,12 +13,16 @@ describe('App Plania Tests', () => {
 
 
   describe('The Home Page', () => {
-    it('successfully planning', () => {
+    it('successfully loads planning page', () => {
       cy.visit('/planning')
-        // click on the first button
-    it('click on the first button', () => {
-      cy.get('.btn').first().click()
-    })})
+      // Vérifier que la page se charge correctement
+      cy.url().should('include', '/planning')
+    })
+    
+    it('can click on the first button', () => {
+      cy.visit('/')
+      cy.get('.btn').first().should('be.visible').click()
+    })
   })
 
   describe('The Gestion des Encadrants Page', () => {
